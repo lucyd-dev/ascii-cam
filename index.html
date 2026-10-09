@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="de">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>ASCII Live Cam</title>
+		<link rel="stylesheet" href="/src/style.css" />
+	</head>
+	<body>
+
+        <main id="app">
+            <video id="webcam" autoplay playsinline muted></video>
+			<canvas id="glCanvas"></canvas>
+		</main>
+
+		<!-- Engine overlay: the engine fills this container with FPS + controls -->
+		<div data-engine-overlay></div>
+
+		<script type="module" src="/src/main.ts"></script>
+	</body>
+</html>

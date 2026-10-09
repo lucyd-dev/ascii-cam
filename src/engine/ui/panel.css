@@ -1,0 +1,105 @@
+/* Engine overlay theming.
+   Colors are CSS custom properties with fallbacks, so an embedding project
+   can override them globally, e.g.  :root { --afx-accent: #00ff88; }  */
+
+.afx-overlay {
+	--afx-accent: #8800ff;
+	--afx-accent-dim: rgba(136, 0, 255, 0.15);
+	--afx-border: rgba(136, 0, 255, 0.33);
+	--afx-bg: rgba(13, 13, 13, 0.85);
+
+	position: fixed;
+	top: 12px;
+	left: 12px;
+	z-index: 9999;
+	min-width: 190px;
+	max-height: calc(100vh - 24px);
+	overflow-y: auto;
+	padding: 8px 12px;
+	background: var(--afx-bg);
+	color: var(--afx-accent);
+	border: 1px solid var(--afx-border);
+	border-radius: 4px;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 12px;
+	line-height: 1.4;
+	user-select: none;
+	pointer-events: auto;
+}
+
+.afx-overlay-title {
+	font-weight: 700;
+	margin-bottom: 2px;
+}
+
+.afx-overlay-row {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.afx-fps {
+	font-weight: 700;
+}
+
+.afx-controls {
+	margin-top: 6px;
+	padding-top: 6px;
+	border-top: 1px solid var(--afx-border);
+}
+
+.afx-control {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+.afx-control-label {
+	width: 96px;
+	flex-shrink: 0;
+}
+
+.afx-control-value {
+	width: 34px;
+	text-align: right;
+	opacity: 0.8;
+}
+
+.afx-control input[type='range'] {
+	flex: 1;
+	min-width: 0;
+	accent-color: var(--afx-accent);
+}
+
+.afx-control input[type='checkbox'],
+.afx-control select {
+	accent-color: var(--afx-accent);
+}
+
+.afx-control select {
+	flex: 1;
+	min-width: 0;
+	background: transparent;
+	color: var(--afx-accent);
+	border: 1px solid var(--afx-border);
+	border-radius: 4px;
+	font: inherit;
+	padding: 2px 4px;
+}
+
+.afx-reset {
+	margin-top: 8px;
+	width: 100%;
+	background: transparent;
+	color: var(--afx-accent);
+	border: 1px solid var(--afx-border);
+	border-radius: 4px;
+	padding: 4px 8px;
+	cursor: pointer;
+	font: inherit;
+}
+
+.afx-reset:hover {
+	background: var(--afx-accent-dim);
+}
