@@ -68,17 +68,12 @@ export const PARAMS: SchemaParam[] = [
 		step: 0.25,
 	},
 	{
+		// Options are filled at runtime from the pipeline's buffer names
+		// (main.ts -> settings.setSelectOptions), so they can never drift.
 		key: 'debugView',
 		label: 'Debug Output',
 		kind: 'select',
 		default: 'final',
-		options: [
-			{ value: 'dog', label: 'DoG' },
-			{ value: 'tile', label: 'Tile' },
-			{ value: 'scene', label: 'Scene' },
-			{ value: 'blurH', label: 'Blur H' },
-			{ value: 'blurV', label: 'Blur V' },
-			{ value: 'final', label: 'Final' },
-		],
+		options: [],
 	},
 ];

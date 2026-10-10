@@ -58,7 +58,7 @@ export interface TextureSpec {
 
 export type UniformSizeRef = { size: string } | { texel: string };
 
-export type UniformValue = number | [number, number] | UniformSizeRef;
+export type UniformValue = number | number[] | UniformSizeRef;
 
 export interface PassSpec {
 	/** Optional label used in validation and shader error messages. */
@@ -70,7 +70,8 @@ export interface PassSpec {
 	output?: string | { buffer: string; side?: BufferSide };
 	/** ping-pong buffer names to swap after this pass. */
 	swap?: string[];
-	/** static uniforms: number, [x, y], { size } -> (w,h), { texel } -> (1/w,1/h). */
+	/** static uniforms: number, [x], [x,y], [x,y,z], [x,y,z,w],
+	 *  { size } -> (w,h), { texel } -> (1/w,1/h). */
 	uniforms?: Record<string, UniformValue>;
 }
 
@@ -289,8 +290,21 @@ export class Pipeline {
 			return;
 		}
 		if (Array.isArray(value)) {
-			pass.setUniform2f(name, value[0], value[1]);
-			return;
+			switch (value.length) {
+				case 1:
+					pass.setUniform1f(name, value[0]);
+					return;
+				case 2:
+					pass.setUniform2f(name, value[0], value[1]);
+					return;
+				case 3:
+					pass.setUniform3f(name, value[0], value[1], value[2]);
+					return;
+				case 4:
+					pass.setUniform4f(name, value[0], value[1], value[2], value[3]);
+					return;
+			}
+			throw new Error(`Pipeline: uniform "${name}" array must have 1-4 components.`);
 		}
 		if ('size' in value) {
 			const [w, h] = this.sizeOf(value.size);

@@ -4,7 +4,7 @@
 // defaults, are overlaid with localStorage, and are pushed into any program
 // that declares the matching uniform.
 
-import type { SchemaParam, SettingsValue } from './schema';
+import type { ParamOption, SchemaParam, SettingsValue } from './schema';
 import type { UniformApplier } from '../pass/pass';
 
 export class SettingsStore implements UniformApplier {
@@ -24,6 +24,14 @@ export class SettingsStore implements UniformApplier {
 
 	getParameters(): readonly SchemaParam[] {
 		return this.params;
+	}
+
+	// Replaces the options of a 'select' parameter at runtime. Lets the engine
+	// derive e.g. the debug list from live pipeline buffers instead of a
+	// hardcoded list. Call before the overlay controls are built.
+	setSelectOptions(key: string, options: ParamOption[]): void {
+		const param = this.params.find((p) => p.key === key);
+		if (param) param.options = options;
 	}
 
 	get(key: string): SettingsValue | undefined {

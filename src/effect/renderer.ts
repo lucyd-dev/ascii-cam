@@ -72,4 +72,9 @@ export class AsciiRenderer {
 	getTimingStats(): ReadonlyMap<string, PassTiming> {
 		return this.pipeline.getTimingStats();
 	}
+
+	// Names of all pipeline buffers, for the debug view dropdown.
+	getBufferNames(): string[] {
+		return this.pipeline.getBufferNames();
+	}
 }

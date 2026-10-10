@@ -51,6 +51,16 @@ export class Pass {
 		if (loc) this.gl.uniform2f(loc, x, y);
 	}
 
+	setUniform3f(name: string, x: number, y: number, z: number): void {
+		const loc = this.uniformLoc(name);
+		if (loc) this.gl.uniform3f(loc, x, y, z);
+	}
+
+	setUniform4f(name: string, x: number, y: number, z: number, w: number): void {
+		const loc = this.uniformLoc(name);
+		if (loc) this.gl.uniform4f(loc, x, y, z, w);
+	}
+
 	// ---- target + input binding ----
 
 	// Makes `target` the draw destination. Before drawing into a texture it is
