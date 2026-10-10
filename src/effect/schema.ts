@@ -58,6 +58,17 @@ export const PARAMS: SchemaParam[] = [
 		step: 0.05,
 	},
 	{
+		// How much the edge signal must differ from the smoothed history before
+		// the temporal blend opens up (0 = freeze, threshold = full response).
+		key: 'u_motionThreshold',
+		label: 'Motion Threshold',
+		kind: 'range',
+		default: 0.18,
+		min: 0.02,
+		max: 0.5,
+		step: 0.01,
+	},
+	{
 		key: 'u_ditherStrength',
 		label: 'Dither',
 		kind: 'range',

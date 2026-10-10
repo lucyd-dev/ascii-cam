@@ -7,6 +7,7 @@ out vec4 fragColor;
 uniform sampler2D u_video;
 uniform sampler2D u_history;
 uniform float u_emaAlpha;
+uniform float u_motionThreshold;
 uniform float u_dogGain;
 uniform vec2 u_resolution;
 
@@ -41,7 +42,14 @@ void main() {
     float diff = narrow - (tau * wide);
     float edgeSignal = clamp(diff * u_dogGain + 0.5, 0.0, 1.0);
 
+    // Motion-adaptive EMA: a dead-zone on |signal - history| ignores per-pixel
+    // noise and ramps the blend to full passthrough on real motion (no ghosting).
     float previous = texture(u_history, v_uv).r;
-    float smoothed = mix(previous, edgeSignal, u_emaAlpha);
+    float error = abs(edgeSignal - previous);
+    float hi = max(u_motionThreshold, 1e-4);
+    float lo = hi * 0.35;
+    float motion = smoothstep(lo, hi, error);
+    float alpha = mix(u_emaAlpha, 1.0, motion);
+    float smoothed = mix(previous, edgeSignal, alpha);
     fragColor = vec4(vec3(smoothed), 1.0);
 }
