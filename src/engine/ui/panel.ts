@@ -1,7 +1,7 @@
 // Engine overlay: the ReShade-style on-screen panel. It combines an FPS
-// readout, the generated settings controls, and optional pipeline tools
-// (debug output, pass bypass, GPU timings). Mount it with mountEngineOverlay
-// (looks up [data-engine-overlay]) or createEngineOverlay(container, ...).
+// readout, the generated shader settings, project-specific "General" content
+// and optional pipeline debug tools. Mount it with mountEngineOverlay (looks up
+// [data-engine-overlay]) or createEngineOverlay(container, ...).
 
 import './panel.css';
 import { FpsMeter } from './fps';
@@ -11,6 +11,7 @@ import { createDetails } from './details';
 import { createTimingsTable, type TimingsTable } from './timings';
 import { UiState } from './ui-state';
 import { el } from './dom';
+import { downloadCanvasPng } from '../gl/capture';
 import type { SettingsStore } from '../settings/store';
 import type { PassTiming } from '../gl/gpu-timer';
 
@@ -28,12 +29,16 @@ export interface PipelineControls {
 export interface EngineOverlayOptions {
 	title?: string;
 	showFps?: boolean;
+	/** Shader settings dropdown plus the "Save PNG" header button. */
 	showControls?: boolean;
-	showTimings?: boolean;
-	showDebugOutput?: boolean;
-	showPasses?: boolean;
-	showScreenshot?: boolean;
+	/** Debug tools: debug output, pass bypass and GPU timings. */
+	showDebug?: boolean;
+	/** Content for the engine's "General" dropdown. */
+	general?: HTMLElement | HTMLElement[];
 	pipeline?: PipelineControls;
+	/** Canvas captured by the header's "Save PNG" button. */
+	canvas?: HTMLCanvasElement;
+	/** Overrides the built-in canvas capture. */
 	onScreenshot?: () => void;
 	selector?: string;
 }
@@ -53,11 +58,10 @@ export function createEngineOverlay(
 		title = 'Engine',
 		showFps = true,
 		showControls = false,
-		showTimings = false,
-		showDebugOutput = false,
-		showPasses = false,
-		showScreenshot = false,
+		showDebug = false,
 		pipeline,
+		general,
+		canvas,
 		onScreenshot,
 	} = options;
 
@@ -65,19 +69,32 @@ export function createEngineOverlay(
 	container.innerHTML = '';
 
 	const uiState = new UiState(`${settings.getStorageKey()}.ui`);
-	const { header, fpsElement } = createHeader(title, showFps, showScreenshot, onScreenshot);
+	const capture =
+		onScreenshot ??
+		(canvas
+			? () =>
+					downloadCanvasPng(
+						canvas,
+						screenshotName(title, pipeline?.getDebugView() ?? 'final'),
+					)
+			: undefined);
+	const { header, fpsElement } = createHeader(title, showFps, showControls, capture);
 	container.append(header, el('div', 'afx-separator'));
 
-	if (showDebugOutput && pipeline) container.append(createDebugOutput(pipeline, uiState));
+	if (general) container.append(createSection('General', 'general', general, uiState));
 	if (showControls) container.append(createSettings(settings, uiState));
-	if (showPasses && pipeline) container.append(createPasses(pipeline, uiState));
 
 	let timings: TimingsTable | null = null;
-	if (showTimings) {
+	if (showDebug && pipeline) {
+		const body = el('div', 'afx-section-content');
+		body.append(createDebugOutput(pipeline, uiState));
+		body.append(createSection('Passes', 'passes', createPassesList(pipeline), uiState));
 		timings = createTimingsTable();
-		const details = createDetails('afx-timings', 'GPU passes', uiState, 'timings');
-		details.append(timings.element);
-		container.append(details);
+		body.append(createSection('GPU passes', 'timings', timings.element, uiState));
+
+		const debug = createDetails('afx-section', 'Debug', uiState, 'debug');
+		debug.append(body);
+		container.append(debug);
 	}
 
 	const fps = new FpsMeter(showFps ? fpsElement : null);
@@ -108,12 +125,25 @@ function createHeader(
 	}
 	header.append(main);
 
-	if (showScreenshot) {
+	if (showScreenshot && onScreenshot) {
 		const actions = el('div', 'afx-header-actions');
-		actions.append(createIconButton('download', 'Save PNG', () => onScreenshot?.()));
+		actions.append(createIconButton('download', 'Save PNG', onScreenshot));
 		header.append(actions);
 	}
 	return { header, fpsElement };
+}
+
+function createSection(
+	label: string,
+	key: string,
+	content: HTMLElement | HTMLElement[],
+	uiState: UiState,
+): HTMLElement {
+	const details = createDetails('afx-section', label, uiState, key);
+	const body = el('div', 'afx-section-content');
+	body.append(...(Array.isArray(content) ? content : [content]));
+	details.append(body);
+	return details;
 }
 
 function createDebugOutput(pipeline: PipelineControls, uiState: UiState): HTMLElement {
@@ -154,15 +184,14 @@ function createDebugOutput(pipeline: PipelineControls, uiState: UiState): HTMLEl
 }
 
 function createSettings(settings: SettingsStore, uiState: UiState): HTMLElement {
-	const details = createDetails('afx-settings', 'Settings', uiState, 'settings');
+	const details = createDetails('afx-settings', 'Shader Settings', uiState, 'settings');
 	const controls = el('div', 'afx-controls');
 	buildControls(controls, settings, uiState);
 	details.append(controls);
 	return details;
 }
 
-function createPasses(pipeline: PipelineControls, uiState: UiState): HTMLElement {
-	const details = createDetails('afx-passes', 'Passes', uiState, 'passes');
+function createPassesList(pipeline: PipelineControls): HTMLElement {
 	const list = el('div', 'afx-passes-list');
 	for (const name of pipeline.getPassNames()) {
 		const row = el('label', 'afx-pass');
@@ -173,8 +202,20 @@ function createPasses(pipeline: PipelineControls, uiState: UiState): HTMLElement
 		row.append(input, el('span', undefined, name));
 		list.append(row);
 	}
-	details.append(list);
-	return details;
+	return list;
+}
+
+function screenshotName(title: string, view: string): string {
+	const slug =
+		title
+			.toLowerCase()
+			.replace(/[^a-z0-9]+/g, '-')
+			.replace(/^-+|-+$/g, '') || 'screenshot';
+	const now = new Date();
+	const pad = (n: number) => String(n).padStart(2, '0');
+	const date = `${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${String(now.getFullYear()).slice(-2)}`;
+	const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+	return `${slug}-${view}-${date}-${time}.png`;
 }
 
 // Mounts the overlay onto an element found via a marker attribute,

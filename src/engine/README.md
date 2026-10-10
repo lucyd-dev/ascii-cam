@@ -97,13 +97,11 @@ pipeline.draw();
 ```ts
 const monitor = mountEngineOverlay(settings, {
 	title: 'My Effect',
-	showControls: true, // schema params, collapsed under "Settings"
-	showDebugOutput: true, // engine buffer selector (needs `pipeline`)
-	showPasses: true, // per-pass enable toggles
-	showTimings: true, // GPU pass timings
-	showScreenshot: true, // "Save PNG" header button
+	showControls: true, // "Shader Settings" dropdown + "Save PNG" button
+	showDebug: true, // debug output, pass bypass and GPU timings
 	pipeline, // Pipeline (or anything matching PipelineControls)
-	onScreenshot: () => downloadCanvasPng(canvas),
+	canvas, // captured by the "Save PNG" button
+	general: customRow, // content for the engine's "General" dropdown
 });
 // per frame: monitor.beginFrame(); ...; monitor.endFrame();
 ```

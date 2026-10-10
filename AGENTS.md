@@ -9,6 +9,9 @@ Vite + TypeScript WebGL2 app that turns a webcam feed into ASCII art. Git repo
   `vite.config.ts` enables `server.watch.usePolling` because the project lives on
   `/mnt/c` under WSL and edited from Windows tools.
 - `npm run build` — `tsc && vite build`. This is the only real verification step.
+  The build inlines JS, CSS and assets into a single self-contained
+  `dist/index.html` (vite-plugin-singlefile + `base: './'`) so it runs from
+  `file://`, e.g. as an OBS browser source.
 - `npx tsc` — typecheck only (tsconfig is already `noEmit`).
 - `npm run format` — Prettier over `src/**/*.ts`; shaders, CSS and HTML are not
   formatted. The shell glob only reaches one directory level, so pass explicit
@@ -23,9 +26,10 @@ Two layers, deliberately separated:
   `src/engine/README.md` before touching it. Import from `'../engine'`, never
   from deep paths outside this folder.
 - `src/effect/` — this project's ASCII effect: `renderer.ts` (facade + video
-  texture), `camera.ts` (device capture), `pipeline.ts` (declarative passes),
-  `schema.ts` (parameter categories), `palettes.ts` (ramp presets),
-  `settings.ts` (singleton store), `shaders/*.frag`.
+  texture), `camera.ts` (device capture), `camera-picker.ts` (selection modal +
+  monitor selector), `pipeline.ts` (declarative passes), `schema.ts` (parameter
+  categories), `palettes.ts` (ramp presets), `settings.ts` (singleton store),
+  `shaders/*.frag`.
 
 Adding or changing an effect step touches three places:
 1. `src/effect/shaders/<name>.frag`
@@ -54,9 +58,18 @@ persists under `ascii-cam.settings.ui` via `engine/ui/ui-state.ts`.
   webcam resolution and the canvas is only displayed scaled to the window at
   devicePixelRatio (mipmaps prevent minification aliasing). The render loop uses
   `requestVideoFrameCallback`, not rAF.
-- Atlas textures are static files in `public/` (`fillASCII.png`, `edgesASCII.png`)
-  served from web root. `startCamera` prefers a device labeled
-  `droidcam source 2` and otherwise uses the first video input.
+- Camera choice (`main.ts`): `?camera=<label|index|deviceId>` in the URL wins,
+  then the stored choice (`ascii-cam.camera` in localStorage), then the
+  `pickCamera` modal; `?camera=pick` forces the modal. A given source starts
+  directly, so only one `getUserMedia` (one permission prompt) runs; devices are
+  enumerated afterwards (labels need permission) for the "General" dropdown
+  selector (`general` option) that switches live. Engine debug tools are gated
+  by `showDebug`; Debug Output, Passes and GPU passes are nested dropdowns under
+  a single "Debug" dropdown. The overlay handles the "Save PNG" button itself
+  from the `canvas` option.
+- Atlas textures live in `src/effect/assets/` (`fillASCII.png`, `edgesASCII.png`)
+  and are imported in `main.ts` so the build inlines them as `data:` URIs (a
+  `file://` image would otherwise taint the WebGL texture).
 
 ## Code style / TS constraints
 

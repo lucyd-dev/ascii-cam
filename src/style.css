@@ -36,3 +36,66 @@ body {
 #glCanvas {
 	display: block;
 }
+
+/* Camera selection modal (shown before the effect starts). */
+
+.camera-picker {
+	position: fixed;
+	inset: 0;
+	z-index: 10000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.72);
+}
+
+.camera-picker-card {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	width: min(420px, 90vw);
+	padding: 20px;
+	background: #0d0d0d;
+	border: 1px solid rgba(136, 0, 255, 0.33);
+	border-radius: 8px;
+	color: var(--main-color);
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.camera-picker-card h2 {
+	font-size: 14px;
+	font-weight: 700;
+}
+
+.camera-picker-card select {
+	background: transparent;
+	color: var(--main-color);
+	border: 1px solid rgba(136, 0, 255, 0.33);
+	border-radius: 4px;
+	padding: 6px 8px;
+	font: inherit;
+}
+
+.camera-picker-preview {
+	width: 100%;
+	aspect-ratio: 16 / 9;
+	background: #000;
+	border-radius: 4px;
+	object-fit: cover;
+}
+
+.camera-picker-confirm {
+	padding: 8px;
+	background: rgba(136, 0, 255, 0.15);
+	color: var(--main-color);
+	border: 1px solid rgba(136, 0, 255, 0.33);
+	border-radius: 4px;
+	cursor: pointer;
+	font: inherit;
+	font-weight: 700;
+}
+
+.camera-picker-confirm:hover {
+	background: var(--main-color);
+	color: #0d0d0d;
+}

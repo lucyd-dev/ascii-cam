@@ -207,21 +207,18 @@
 }
 
 .afx-settings,
-.afx-passes,
-.afx-timings {
+.afx-section {
 	margin-top: 6px;
 }
 
 .afx-settings > summary,
-.afx-passes > summary,
-.afx-timings > summary {
+.afx-section > summary {
 	cursor: pointer;
 	font-weight: 700;
 }
 
+.afx-section-content,
 .afx-controls,
-.afx-passes-list,
-.afx-timings-content,
 .afx-group-controls {
 	margin-top: 4px;
 	padding-left: 8px;
