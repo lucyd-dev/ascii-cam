@@ -4,8 +4,12 @@ import { startCamera } from './effect/camera';
 import { settings } from './effect/settings';
 import { createGLContext, loadTexture, mountEngineOverlay } from './engine';
 
-// Engine overlay (FPS + controls) via the [data-engine-overlay] element.
-const monitor = mountEngineOverlay(settings, { title: 'ASCII Live Cam', showControls: true });
+// Engine overlay (FPS + controls + GPU timings) via [data-engine-overlay].
+const monitor = mountEngineOverlay(settings, {
+	title: 'ASCII Live Cam',
+	showControls: true,
+	showTimings: true,
+});
 
 const canvas = document.querySelector<HTMLCanvasElement>('#glCanvas')!;
 const gl = createGLContext(canvas);
@@ -24,6 +28,7 @@ await startCamera(video, {
 function loop() {
 	monitor.beginFrame();
 	renderer.render(video);
+	monitor.setTimings(renderer.getTimingStats());
 	monitor.endFrame();
 	video.requestVideoFrameCallback(loop);
 }

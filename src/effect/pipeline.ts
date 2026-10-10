@@ -31,6 +31,7 @@ export function createEffectPipeline(
 	return new Pipeline(gl, quad, {
 		mainSize: size,
 		uniforms: settings,
+		timing: true, // per-pass GPU timings for the overlay
 
 		textures: [
 			{ name: 'video', texture: inputs.videoTexture },
@@ -39,7 +40,9 @@ export function createEffectPipeline(
 		],
 
 		buffers: [
-			{ name: 'dog', pingPong: true }, // full-res DoG history (EMA)
+			// 'r8' = single-channel grayscale (4x less bandwidth); the debug
+			// view renders single-channel buffers as gray.
+			{ name: 'dog', pingPong: true, format: 'r8' }, // full-res DoG history (EMA)
 			{ name: 'tile', width: size.width / 8, height: size.height / 8, filter: gl.NEAREST },
 			{ name: 'scene' }, // sharp ASCII composite
 			{ name: 'blurH', scale: 4 }, // wide horizontal glow (1/4 res)
@@ -48,6 +51,7 @@ export function createEffectPipeline(
 
 		passes: [
 			{
+				name: 'dog',
 				frag: dogFrag,
 				inputs: { u_video: 'video', u_history: { buffer: 'dog', side: 'src' } },
 				output: 'dog',
@@ -55,6 +59,7 @@ export function createEffectPipeline(
 				uniforms: { u_resolution: { size: 'dog' } },
 			},
 			{
+				name: 'tile',
 				frag: tileFrag,
 				inputs: { u_video: 'video', u_dogTexture: { buffer: 'dog' } },
 				output: 'tile',
@@ -64,6 +69,7 @@ export function createEffectPipeline(
 				},
 			},
 			{
+				name: 'ascii',
 				frag: asciiFrag,
 				inputs: {
 					u_video: 'video',
@@ -75,18 +81,21 @@ export function createEffectPipeline(
 				uniforms: { u_resolution: { size: 'main' } },
 			},
 			{
+				name: 'blurH',
 				frag: blurFrag,
 				inputs: { u_source: 'scene' },
 				output: 'blurH',
 				uniforms: { u_texelSize: { texel: 'blurH' }, u_direction: [1, 0] },
 			},
 			{
+				name: 'blurV',
 				frag: blurFrag,
 				inputs: { u_source: 'blurH' },
 				output: 'blurV',
 				uniforms: { u_texelSize: { texel: 'blurV' }, u_direction: [0, 1] },
 			},
 			{
+				name: 'composite',
 				frag: compositeFrag,
 				inputs: { u_scene: 'scene', u_blur: 'blurV' },
 				// no output -> draws to the screen

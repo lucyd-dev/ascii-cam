@@ -15,7 +15,7 @@ export interface UniformApplier {
 export class Pass {
 	readonly program: WebGLProgram;
 
-	private gl: WebGL2RenderingContext;
+	protected gl: WebGL2RenderingContext;
 	private quad: FullScreenQuad;
 	private uniforms: UniformApplier;
 	private locations = new Map<string, WebGLUniformLocation | null>();
@@ -25,11 +25,12 @@ export class Pass {
 		quad: FullScreenQuad,
 		fragSource: string,
 		uniforms: UniformApplier,
+		label?: string,
 	) {
 		this.gl = gl;
 		this.quad = quad;
 		this.uniforms = uniforms;
-		this.program = createProgram(gl, vertSource, fragSource);
+		this.program = createProgram(gl, vertSource, fragSource, label);
 		gl.useProgram(this.program);
 	}
 

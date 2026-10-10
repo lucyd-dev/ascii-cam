@@ -2,7 +2,7 @@
 // else to the declarative engine pipeline.
 
 import { FullScreenQuad } from '../engine';
-import type { Pipeline } from '../engine';
+import type { PassTiming, Pipeline } from '../engine';
 import { settings } from './settings';
 import { createEffectPipeline } from './pipeline';
 
@@ -66,5 +66,10 @@ export class AsciiRenderer {
 		if (typeof debugView === 'string' && debugView !== 'final') {
 			this.pipeline.present(debugView);
 		}
+	}
+
+	// Per-pass GPU timing statistics (see Pipeline.getTimingStats).
+	getTimingStats(): ReadonlyMap<string, PassTiming> {
+		return this.pipeline.getTimingStats();
 	}
 }

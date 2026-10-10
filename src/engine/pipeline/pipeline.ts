@@ -16,8 +16,13 @@
 import { Pass, type UniformApplier } from '../pass/pass';
 import { PingPong } from '../pass/ping-pong';
 import { PresentPass } from '../pass/present-pass';
-import { createRenderTarget, type RenderTarget } from '../gl/framebuffer';
+import {
+	createRenderTarget,
+	type RenderTarget,
+	type TextureFormat,
+} from '../gl/framebuffer';
 import { bindTexture } from '../gl/binding';
+import { GpuTimer, type PassTiming } from '../gl/gpu-timer';
 import type { FullScreenQuad } from '../gl/quad';
 
 export interface MainSize {
@@ -40,6 +45,8 @@ export interface BufferSpec {
 	scale?: number;
 	/** gl.LINEAR (default) or gl.NEAREST. */
 	filter?: number;
+	/** Storage format; 'rgba8' (default) or 'r8' for grayscale data. */
+	format?: TextureFormat;
 	/** Two alternating textures for temporal history (EMA). */
 	pingPong?: boolean;
 }
@@ -54,6 +61,8 @@ export type UniformSizeRef = { size: string } | { texel: string };
 export type UniformValue = number | [number, number] | UniformSizeRef;
 
 export interface PassSpec {
+	/** Optional label used in validation and shader error messages. */
+	name?: string;
 	frag: string;
 	/** uniform name -> texture name or { buffer, side }. */
 	inputs: Record<string, string | BufferRef>;
@@ -71,9 +80,13 @@ export interface PipelineOptions {
 	buffers?: BufferSpec[];
 	textures?: TextureSpec[];
 	passes: PassSpec[];
+	/** Measure per-pass GPU time (EXT_disjoint_timer_query_webgl2). */
+	timing?: boolean;
 }
 
 interface Task {
+	/** Pass label, used for error messages and GPU timing. */
+	name: string;
 	pass: Pass;
 	/** Resolved per draw: ping-pong buffers change their 'dst' after a swap. */
 	output: () => RenderTarget | null;
@@ -94,22 +107,25 @@ export class Pipeline {
 
 	private tasks: Task[] = [];
 	private presentPass: PresentPass | null = null;
+	private timer: GpuTimer | null = null;
 
 	constructor(gl: WebGL2RenderingContext, quad: FullScreenQuad, options: PipelineOptions) {
 		this.gl = gl;
 		this.quad = quad;
 		this.mainSize = options.mainSize;
 		this.uniformApplier = options.uniforms;
+		if (options.timing) this.timer = new GpuTimer(gl);
 
 		for (const spec of options.buffers ?? []) {
 			const width = spec.width ?? Math.round(options.mainSize.width / (spec.scale ?? 1));
 			const height = spec.height ?? Math.round(options.mainSize.height / (spec.scale ?? 1));
 			const filter = spec.filter ?? gl.LINEAR;
+			const format = spec.format ?? 'rgba8';
 			this.buffers.set(
 				spec.name,
 				spec.pingPong
-					? new PingPong(gl, width, height)
-					: createRenderTarget(gl, width, height, filter),
+					? new PingPong(gl, width, height, filter, format)
+					: createRenderTarget(gl, width, height, filter, format),
 			);
 		}
 
@@ -117,13 +133,24 @@ export class Pipeline {
 			this.textures.set(spec.name, spec.texture);
 		}
 
-		for (const spec of options.passes) {
-			this.tasks.push(this.buildTask(spec));
-		}
+		options.passes.forEach((spec, index) => {
+			this.tasks.push(this.buildTask(spec, index));
+		});
 	}
 
 	getBufferNames(): string[] {
 		return [...this.buffers.keys()];
+	}
+
+	// Last resolved per-pass GPU time in milliseconds (empty if timing is off
+	// or the timer-query extension is unavailable). Results lag a few frames.
+	getTimings(): ReadonlyMap<string, number> {
+		return this.timer?.getTimings() ?? new Map();
+	}
+
+	// Rolling per-pass statistics (avg/min/max) for a stable readout.
+	getTimingStats(): ReadonlyMap<string, PassTiming> {
+		return this.timer?.getStats() ?? new Map();
 	}
 
 	draw(): void {
@@ -137,7 +164,9 @@ export class Pipeline {
 				bindTexture(gl, input.unit, input.texture());
 			}
 
+			this.timer?.begin(task.name);
 			task.pass.render();
+			this.timer?.end(task.name);
 		}
 
 		// Swap ping-pong buffers AFTER every pass has read/written this frame,
@@ -145,6 +174,8 @@ export class Pipeline {
 		for (const task of this.tasks) {
 			for (const ping of task.swaps) ping.swap();
 		}
+
+		this.timer?.poll();
 	}
 
 	// Shows one named buffer on the screen (debug inspection).
@@ -153,14 +184,24 @@ export class Pipeline {
 			this.presentPass = new PresentPass(this.gl, this.quad, this.nextUnit++);
 		}
 		// After draw() the ping-pong was swapped, so the latest output is on 'src'.
-		const side: BufferSide = this.requireBuffer(name) instanceof PingPong ? 'src' : 'dst';
-		this.presentPass.show(this.resolveRef({ buffer: name, side }));
+		const buffer = this.requireBuffer(name);
+		const target = buffer instanceof PingPong ? buffer.src : buffer;
+		this.presentPass.show(target.texture, target.format);
 	}
 
 	// ---- internals ----
 
-	private buildTask(spec: PassSpec): Task {
-		const pass = new Pass(this.gl, this.quad, spec.frag, this.uniformApplier);
+	private buildTask(spec: PassSpec, index: number): Task {
+		// A stable label so every validation / shader error names the culprit.
+		const label = spec.name ?? `pass[${index}]`;
+
+		// Fail fast, before any GL object is created, if an input refers to a
+		// texture/buffer that was never declared.
+		for (const [uniform, ref] of Object.entries(spec.inputs)) {
+			this.assertRefExists(ref, `${label}: input "${uniform}"`);
+		}
+
+		const pass = new Pass(this.gl, this.quad, spec.frag, this.uniformApplier, label);
 
 		const inputs: Task['inputs'] = [];
 		for (const [uniform, ref] of Object.entries(spec.inputs)) {
@@ -173,15 +214,26 @@ export class Pipeline {
 			this.applyStaticUniform(pass, name, value);
 		}
 
-		const output = this.resolveOutput(spec.output);
+		const output = this.resolveOutput(spec.output, label);
 		const swaps: PingPong[] = [];
 		for (const name of spec.swap ?? []) {
-			const buffer = this.requireBuffer(name);
+			const buffer = this.requireBuffer(name, `${label}: swap`);
 			if (buffer instanceof PingPong) swaps.push(buffer);
-			else throw new Error(`Pipeline: swap target "${name}" is not a ping-pong buffer.`);
+			else throw new Error(`Pipeline: [${label}] swap target "${name}" is not a ping-pong buffer.`);
 		}
 
-		return { pass, output, inputs, swaps };
+		return { name: label, pass, output, inputs, swaps };
+	}
+
+	// Throws if `ref` does not name a declared texture or buffer.
+	private assertRefExists(ref: string | BufferRef, context: string): void {
+		const name = typeof ref === 'string' ? ref : ref.buffer;
+		if (typeof ref === 'string') {
+			if (this.textures.has(name) || this.buffers.has(name)) return;
+		} else if (this.buffers.has(name)) {
+			return;
+		}
+		throw new Error(`Pipeline: [${context}] references unknown texture or buffer "${name}".`);
 	}
 
 	private unitOf(ref: string | BufferRef): number {
@@ -209,14 +261,15 @@ export class Pipeline {
 		return buffer.texture;
 	}
 
-	private resolveOutput(output: PassSpec['output']): () => RenderTarget | null {
+	private resolveOutput(output: PassSpec['output'], label?: string): () => RenderTarget | null {
+		const context = label ? `${label}: output` : undefined;
 		if (typeof output === 'string') {
-			const buffer = this.requireBuffer(output);
+			const buffer = this.requireBuffer(output, context);
 			if (buffer instanceof PingPong) return () => buffer.dst;
 			return () => buffer;
 		}
 		if (output?.buffer) {
-			const buffer = this.requireBuffer(output.buffer);
+			const buffer = this.requireBuffer(output.buffer, context);
 			if (buffer instanceof PingPong) return () => buffer[output.side ?? 'dst'];
 			return () => buffer;
 		}
@@ -252,9 +305,11 @@ export class Pipeline {
 		throw new Error(`Pipeline: unsupported static uniform "${name}".`);
 	}
 
-	private requireBuffer(name: string): RenderTarget | PingPong {
+	private requireBuffer(name: string, context?: string): RenderTarget | PingPong {
 		const buffer = this.buffers.get(name);
-		if (!buffer) throw new Error(`Pipeline: unknown buffer "${name}".`);
+		if (!buffer) {
+			throw new Error(`Pipeline: unknown buffer "${name}"${context ? ` [${context}]` : ''}.`);
+		}
 		return buffer;
 	}
 }

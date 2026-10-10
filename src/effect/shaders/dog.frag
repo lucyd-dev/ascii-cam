@@ -7,6 +7,7 @@ out vec4 fragColor;
 uniform sampler2D u_video;
 uniform sampler2D u_history;
 uniform float u_emaAlpha;
+uniform float u_dogGain;
 uniform vec2 u_resolution;
 
 float getLuminance(vec3 color) {
@@ -41,7 +42,7 @@ void main() {
     // Difference of Gaussians
     float tau = 0.98;
     float diff = narrow - (tau * wide);
-    float edgeSignal = clamp(diff * 6.0 + 0.5, 0.0, 1.0);
+    float edgeSignal = clamp(diff * u_dogGain + 0.5, 0.0, 1.0);
 
     float previous = texture(u_history, v_uv).r;
     float smoothed = mix(previous, edgeSignal, u_emaAlpha);

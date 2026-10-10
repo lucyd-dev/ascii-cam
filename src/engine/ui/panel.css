@@ -88,6 +88,65 @@
 	padding: 2px 4px;
 }
 
+.afx-timings {
+	margin-top: 6px;
+	padding-top: 6px;
+	border-top: 1px solid var(--afx-border);
+}
+
+.afx-timings summary {
+	cursor: pointer;
+	font-weight: 700;
+}
+
+.afx-timings-list {
+	margin-top: 4px;
+}
+
+.afx-timing-row {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.afx-timing-metrics {
+	display: flex;
+	align-items: baseline;
+	gap: 6px;
+}
+
+.afx-timing-value {
+	opacity: 0.9;
+}
+
+.afx-timing-range {
+	opacity: 0.5;
+	font-size: 10px;
+	min-width: 46px;
+	text-align: right;
+}
+
+.afx-timings-empty {
+	opacity: 0.6;
+}
+
+.afx-timings-copy {
+	margin-top: 6px;
+	width: 100%;
+	background: transparent;
+	color: var(--afx-accent);
+	border: 1px solid var(--afx-border);
+	border-radius: 4px;
+	padding: 2px 6px;
+	cursor: pointer;
+	font: inherit;
+	font-size: 11px;
+}
+
+.afx-timings-copy:hover {
+	background: var(--afx-accent-dim);
+}
+
 .afx-reset {
 	margin-top: 8px;
 	width: 100%;

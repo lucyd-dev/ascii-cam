@@ -2,16 +2,26 @@
 // Used whenever a pass must read the previous frame's result
 // while writing the next one (e.g. temporal EMA).
 
-import { createRenderTarget, type RenderTarget } from '../gl/framebuffer';
+import {
+	createRenderTarget,
+	type RenderTarget,
+	type TextureFormat,
+} from '../gl/framebuffer';
 
 export class PingPong {
 	readonly targets: [RenderTarget, RenderTarget];
 	private index: number = 0;
 
-	constructor(gl: WebGL2RenderingContext, width: number, height: number) {
+	constructor(
+		gl: WebGL2RenderingContext,
+		width: number,
+		height: number,
+		filter: number = gl.LINEAR,
+		format: TextureFormat = 'rgba8',
+	) {
 		this.targets = [
-			createRenderTarget(gl, width, height, gl.LINEAR),
-			createRenderTarget(gl, width, height, gl.LINEAR),
+			createRenderTarget(gl, width, height, filter, format),
+			createRenderTarget(gl, width, height, filter, format),
 		];
 	}
 

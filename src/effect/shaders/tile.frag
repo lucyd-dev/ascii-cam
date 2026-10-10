@@ -12,7 +12,9 @@ const float BLOCK_SIZE = 8.0f;
 const float PI = 3.14159265359f;
 const float HALF_PI = 1.57079632679f;
 
-const float EDGE_THRESHOLD = 0.12f;
+// Per-pixel edge sensitivity: Sobel magnitudes below this count as "no edge".
+uniform float u_edgeThreshold;
+// Per-tile aggregate: how much edge vote a tile needs to become an edge tile.
 uniform float u_minEdgeVotes;
 const float FILL_GLYPH_COUNT = 10.0f;
 
@@ -51,8 +53,8 @@ int evaluatePixelEdge(vec2 coord, out float edgeResponse) {
     float gy = ((tl + 2.0f * t + tr) - (bl + 2.0f * b + br)) / 4.0f;
 
     edgeResponse  = length(vec2(gx, gy));
-    if(edgeResponse < EDGE_THRESHOLD) {
-        edgeResponse = EDGE_THRESHOLD;
+    if(edgeResponse < u_edgeThreshold) {
+        edgeResponse = u_edgeThreshold;
         return 0;
     }
 
@@ -102,7 +104,7 @@ void main() {
             vec2 samplePos = blockOrigin + vec2(x, y);
             float weight;
             int edgeType = evaluatePixelEdge(samplePos, weight);
-            histogram[edgeType] += weight  - EDGE_THRESHOLD;
+            histogram[edgeType] += weight  - u_edgeThreshold;
         }
     }
 
