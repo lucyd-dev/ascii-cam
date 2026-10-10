@@ -21,10 +21,12 @@ export const PARAMS: SchemaParam[] = [
 		step: 0.05,
 	},
 	{
+		// NOTE: lower = stronger temporal smoothing (less noise/flicker, more
+		// ghosting). The label reads inverted relative to its value.
 		key: 'u_emaAlpha',
 		label: 'Anti-Flicker',
 		kind: 'range',
-		default: 0.6,
+		default: 0.45,
 		min: 0.05,
 		max: 1,
 		step: 0.05,
@@ -60,7 +62,7 @@ export const PARAMS: SchemaParam[] = [
 		key: 'u_dogGain',
 		label: 'Edge Gain',
 		kind: 'range',
-		default: 6,
+		default: 8,
 		min: 0,
 		max: 12,
 		step: 0.25,
