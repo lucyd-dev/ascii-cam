@@ -10,6 +10,10 @@ uniform sampler2D u_tileTexture;
 uniform vec2 u_resolution;
 uniform vec2 u_tileResolution;
 uniform bool u_monochromic;
+uniform vec3 u_paletteBg;
+uniform vec3 u_paletteShadow;
+uniform vec3 u_paletteMid;
+uniform vec3 u_paletteHighlight;
 
 const float FILL_GLYPH_COUNT = 10.0f;
 const float EDGE_GLYPH_COUNT = 5.0f;
@@ -44,19 +48,14 @@ void main() {
 
         fragColor = vec4(gradedColor * glyphAlpha, 1.0f);
     } else {
-        vec3 bgColor = vec3(0.06f, 0.05f, 0.09f);
-        vec3 shadowColor = vec3(0.10f, 0.06f, 0.22f);
-        vec3 midColor = vec3(0.47f, 0.33f, 0.62f);
-        vec3 highlightColor = vec3(1.0f, 0.84f, 0.84f);
-
         vec3 rampColor;
         if (lum < 0.5) {
-            rampColor = mix(shadowColor, midColor, lum * 2.0);
+            rampColor = mix(u_paletteShadow, u_paletteMid, lum * 2.0);
         } else {
-            rampColor = mix(midColor, highlightColor, (lum - 0.5) * 2.0);
+            rampColor = mix(u_paletteMid, u_paletteHighlight, (lum - 0.5) * 2.0);
         }
 
-        vec3 cellBase = mix(bgColor, rampColor, 0.1f);
+        vec3 cellBase = mix(u_paletteBg, rampColor, 0.1f);
         vec3 finalColor = mix(cellBase, rampColor, glyphAlpha);
 
         fragColor = vec4(finalColor, 1.0f);

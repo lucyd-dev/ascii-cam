@@ -3,6 +3,7 @@
 // Adding a control = add one entry here + declare the uniform in the shader.
 
 import type { SchemaParam } from '../engine';
+import { PALETTES } from './palettes';
 
 export const PARAMS: SchemaParam[] = [
 	{
@@ -10,6 +11,13 @@ export const PARAMS: SchemaParam[] = [
 		label: 'Monochrome',
 		kind: 'toggle',
 		default: true,
+	},
+	{
+		key: 'u_palette',
+		label: 'Palette',
+		kind: 'select',
+		default: 'purple',
+		options: PALETTES.map((p) => ({ value: p.name, label: p.label })),
 	},
 	{
 		key: 'u_glowStrength',

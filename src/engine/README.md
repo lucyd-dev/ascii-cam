@@ -25,7 +25,7 @@ const settings = new SettingsStore(PARAMS, 'app.settings');
 
 const pipeline = new Pipeline(gl, quad, {
 	mainSize: { width: 1920, height: 1080 },
-	uniforms: settings, // pushes UI values into the shaders
+	uniforms: settings, // pushes UI values into the shaders (or an array of appliers)
 	timing: true, // per-pass GPU timings
 	textures: [{ name: 'src', texture }],
 	buffers: [

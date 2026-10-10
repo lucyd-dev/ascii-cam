@@ -82,7 +82,8 @@ export interface PassSpec {
 
 export interface PipelineOptions {
 	mainSize: MainSize;
-	uniforms: UniformApplier;
+	/** One or more uniform sources; all are applied to every pass. */
+	uniforms: UniformApplier | UniformApplier[];
 	buffers?: BufferSpec[];
 	textures?: TextureSpec[];
 	passes: PassSpec[];
@@ -121,7 +122,12 @@ export class Pipeline {
 		this.gl = gl;
 		this.quad = quad;
 		this.mainSize = options.mainSize;
-		this.uniformApplier = options.uniforms;
+		const appliers = Array.isArray(options.uniforms) ? options.uniforms : [options.uniforms];
+		this.uniformApplier = {
+			applyTo: (gl, program) => {
+				for (const applier of appliers) applier.applyTo(gl, program);
+			},
+		};
 		if (options.timing) this.timer = new GpuTimer(gl);
 
 		for (const spec of options.buffers ?? []) {
