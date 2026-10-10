@@ -27,6 +27,7 @@ export interface RenderTarget {
 	width: number;
 	height: number;
 	format: TextureFormat;
+	mipmap: boolean;
 }
 
 export function createRenderTarget(
@@ -35,6 +36,7 @@ export function createRenderTarget(
 	height: number,
 	filter: number,
 	format: TextureFormat = 'rgba8',
+	mipmap = false,
 ): RenderTarget {
 	const glFormat = resolveFormat(gl, format);
 
@@ -52,7 +54,7 @@ export function createRenderTarget(
 		null,
 	);
 
-	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filter);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mipmap ? gl.LINEAR_MIPMAP_LINEAR : filter);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -75,5 +77,16 @@ export function createRenderTarget(
 	// raw binding (a common source of feedback-loop errors).
 	gl.bindTexture(gl.TEXTURE_2D, null);
 
-	return { texture, fbo, width, height, format };
+	return { texture, fbo, width, height, format, mipmap };
 }
+
+// Rebuilds the mip chain of a target after it was rendered into. Must be
+// called once per frame for buffers that are sampled minified (downscaled),
+// so their minification is filtered instead of aliasing.
+export function generateMipmaps(gl: WebGL2RenderingContext, target: RenderTarget): void {
+	gl.bindTexture(gl.TEXTURE_2D, target.texture);
+	gl.generateMipmap(gl.TEXTURE_2D);
+	gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
+

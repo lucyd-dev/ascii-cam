@@ -18,10 +18,11 @@ export class PingPong {
 		height: number,
 		filter: number = gl.LINEAR,
 		format: TextureFormat = 'rgba8',
+		mipmap = false,
 	) {
 		this.targets = [
-			createRenderTarget(gl, width, height, filter, format),
-			createRenderTarget(gl, width, height, filter, format),
+			createRenderTarget(gl, width, height, filter, format, mipmap),
+			createRenderTarget(gl, width, height, filter, format, mipmap),
 		];
 	}
 

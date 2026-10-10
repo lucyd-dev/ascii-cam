@@ -18,6 +18,7 @@ import { PingPong } from '../pass/ping-pong';
 import { PresentPass } from '../pass/present-pass';
 import {
 	createRenderTarget,
+	generateMipmaps,
 	type RenderTarget,
 	type TextureFormat,
 } from '../gl/framebuffer';
@@ -49,6 +50,8 @@ export interface BufferSpec {
 	format?: TextureFormat;
 	/** Two alternating textures for temporal history (EMA). */
 	pingPong?: boolean;
+	/** Keep a mip chain (rebuilt after each write) for clean minification. */
+	mipmap?: boolean;
 }
 
 export interface TextureSpec {
@@ -126,11 +129,12 @@ export class Pipeline {
 			const height = spec.height ?? Math.round(options.mainSize.height / (spec.scale ?? 1));
 			const filter = spec.filter ?? gl.LINEAR;
 			const format = spec.format ?? 'rgba8';
+			const mipmap = spec.mipmap ?? false;
 			this.buffers.set(
 				spec.name,
 				spec.pingPong
-					? new PingPong(gl, width, height, filter, format)
-					: createRenderTarget(gl, width, height, filter, format),
+					? new PingPong(gl, width, height, filter, format, mipmap)
+					: createRenderTarget(gl, width, height, filter, format, mipmap),
 			);
 		}
 
@@ -196,6 +200,8 @@ export class Pipeline {
 			this.timer?.begin(task.name);
 			task.pass.render();
 			this.timer?.end(task.name);
+
+			if (target?.mipmap) generateMipmaps(gl, target);
 		}
 
 		// Swap ping-pong buffers AFTER every pass has read/written this frame,

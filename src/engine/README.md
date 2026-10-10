@@ -45,7 +45,10 @@ pipeline.draw();
 ## What the pipeline does for you
 
 - **Allocates** every declared buffer (size from `width`/`height` or `scale`;
-  `format: 'r8'` for grayscale, `filter: gl.NEAREST` for pixel data).
+  `format: 'r8'` for grayscale, `filter: gl.NEAREST` for pixel data,
+  `mipmap: true` to keep a mip chain rebuilt after each write — sampling that
+  buffer minified (e.g. downscaling to the screen) is then filtered instead of
+  aliasing).
 - **Assigns texture units** automatically for every input.
 - **Binds outputs** with feedback-loop protection (detaches the target texture
   from all units before drawing into it).

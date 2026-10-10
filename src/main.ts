@@ -17,7 +17,41 @@ await startCamera(video, {
 	preferLabel: 'droidcam source 2',
 });
 
-const renderer = new AsciiRenderer(gl, { fillAtlas, edgeAtlas });
+const aspect =
+	video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : 16 / 9;
+
+// The effect renders at the webcam resolution; the canvas only displays it,
+// scaled to the window. Mipmapped minification means no downscale aliasing,
+// so the full-detail image stays visible in any window size.
+function layoutCanvas(): void {
+	const dpr = window.devicePixelRatio || 1;
+	let cssWidth = window.innerWidth;
+	let cssHeight = cssWidth / aspect;
+	if (cssHeight > window.innerHeight) {
+		cssHeight = window.innerHeight;
+		cssWidth = cssHeight * aspect;
+	}
+	cssWidth = Math.max(1, Math.floor(cssWidth));
+	cssHeight = Math.max(1, Math.floor(cssHeight));
+	canvas.style.width = `${cssWidth}px`;
+	canvas.style.height = `${cssHeight}px`;
+	canvas.width = Math.max(1, Math.round(cssWidth * dpr));
+	canvas.height = Math.max(1, Math.round(cssHeight * dpr));
+}
+
+layoutCanvas();
+const renderer = new AsciiRenderer(gl, {
+	fillAtlas,
+	edgeAtlas,
+	width: video.videoWidth || 1920,
+	height: video.videoHeight || 1080,
+});
+
+let resizeTimer = 0;
+window.addEventListener('resize', () => {
+	window.clearTimeout(resizeTimer);
+	resizeTimer = window.setTimeout(layoutCanvas, 100);
+});
 
 function screenshotName(): string {
 	const now = new Date();

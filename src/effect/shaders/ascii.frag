@@ -8,9 +8,9 @@ uniform sampler2D u_fillAtlas;
 uniform sampler2D u_edgeAtlas;
 uniform sampler2D u_tileTexture;
 uniform vec2 u_resolution;
+uniform vec2 u_tileResolution;
 uniform bool u_monochromic;
 
-const float BLOCK_SIZE = 8.0f;
 const float FILL_GLYPH_COUNT = 10.0f;
 const float EDGE_GLYPH_COUNT = 5.0f;
 
@@ -22,7 +22,8 @@ void main() {
     bool isEdge = tileData.g > 0.5f;
     float lum = tileData.b;
 
-    vec2 cellUV = mod(gl_FragCoord.xy, BLOCK_SIZE) / BLOCK_SIZE;
+    vec2 block = u_resolution / u_tileResolution;
+    vec2 cellUV = mod(gl_FragCoord.xy, block) / block;
 
     float glyphAlpha = 0.0f;
 
@@ -35,7 +36,7 @@ void main() {
     }
 
     if(!u_monochromic) {
-        vec2 blockCenterPixel = floor(gl_FragCoord.xy / BLOCK_SIZE) * BLOCK_SIZE + (BLOCK_SIZE * 0.5f);
+        vec2 blockCenterPixel = floor(gl_FragCoord.xy / block) * block + block * 0.5f;
         vec3 baseColor = texture(u_video, blockCenterPixel / u_resolution).rgb * 1.35f;
 
         // Slight contrast curve: lifts highlights, cleans shadows

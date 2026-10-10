@@ -9,6 +9,8 @@ import { createEffectPipeline } from './pipeline';
 export interface AsciiRendererOptions {
 	fillAtlas: WebGLTexture;
 	edgeAtlas: WebGLTexture;
+	width: number;
+	height: number;
 }
 
 export class AsciiRenderer {
@@ -18,18 +20,11 @@ export class AsciiRenderer {
 	// (no per-method forwarding needed).
 	readonly pipeline: Pipeline;
 
-	private readonly width = 1920;
-	private readonly height = 1080;
-
 	constructor(gl: WebGL2RenderingContext, options: AsciiRendererOptions) {
 		this.gl = gl;
 
 		// Flip uploaded images (video + atlases) so they are not upside down.
 		gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-
-		const canvas = gl.canvas as HTMLCanvasElement;
-		canvas.width = this.width;
-		canvas.height = this.height;
 
 		this.videoTexture = gl.createTexture()!;
 		gl.activeTexture(gl.TEXTURE0);
@@ -44,7 +39,7 @@ export class AsciiRenderer {
 			gl,
 			quad,
 			settings,
-			{ width: this.width, height: this.height },
+			{ width: options.width, height: options.height },
 			{
 				fillAtlas: options.fillAtlas,
 				edgeAtlas: options.edgeAtlas,
@@ -55,12 +50,9 @@ export class AsciiRenderer {
 
 	render(video: HTMLVideoElement): void {
 		const gl = this.gl;
-
-		// Upload the latest webcam frame.
 		gl.activeTexture(gl.TEXTURE0);
 		gl.bindTexture(gl.TEXTURE_2D, this.videoTexture);
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
-
 		this.pipeline.draw();
 	}
 }

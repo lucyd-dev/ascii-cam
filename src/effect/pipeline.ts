@@ -43,8 +43,8 @@ export function createEffectPipeline(
 			// 'r8' = single-channel grayscale (4x less bandwidth); the debug
 			// view renders single-channel buffers as gray.
 			{ name: 'dog', pingPong: true, format: 'r8' }, // full-res DoG history (EMA)
-			{ name: 'tile', width: size.width / 8, height: size.height / 8, filter: gl.NEAREST },
-			{ name: 'scene' }, // sharp ASCII composite
+			{ name: 'tile', scale: 8, filter: gl.NEAREST },
+			{ name: 'scene', mipmap: true }, // sharp ASCII composite
 			{ name: 'blurH', scale: 4 }, // wide horizontal glow (1/4 res)
 			{ name: 'blurV', scale: 4 }, // wide vertical glow (1/4 res)
 		],
@@ -78,7 +78,10 @@ export function createEffectPipeline(
 					u_tileTexture: 'tile',
 				},
 				output: 'scene',
-				uniforms: { u_resolution: { size: 'main' } },
+				uniforms: {
+					u_resolution: { size: 'main' },
+					u_tileResolution: { size: 'tile' },
+				},
 			},
 			{
 				name: 'blurH',

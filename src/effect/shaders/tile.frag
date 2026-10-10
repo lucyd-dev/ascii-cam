@@ -8,7 +8,6 @@ uniform sampler2D u_dogTexture;
 uniform vec2 u_resolution;
 uniform vec2 u_tileResolution;
 
-const float BLOCK_SIZE = 8.0f;
 const float PI = 3.14159265359f;
 const float HALF_PI = 1.57079632679f;
 
@@ -36,15 +35,15 @@ float sampleDog(vec2 coord) {
     return texture(u_dogTexture, fboUV).r;
 }
 
-int evaluatePixelEdge(vec2 coord, out float edgeResponse) {
-    float bl = sampleDog(coord + vec2(-1.0f, -1.0f));
-    float b = sampleDog(coord + vec2(0.0f, -1.0f));
-    float br = sampleDog(coord + vec2(1.0f, -1.0f));
-    float l = sampleDog(coord + vec2(-1.0f, 0.0f));
-    float r = sampleDog(coord + vec2(1.0f, 0.0f));
-    float tl = sampleDog(coord + vec2(-1.0f, 1.0f));
-    float t = sampleDog(coord + vec2(0.0f, 1.0f));
-    float tr = sampleDog(coord + vec2(1.0f, 1.0f));
+int evaluatePixelEdge(vec2 coord, vec2 tap, out float edgeResponse) {
+    float bl = sampleDog(coord + vec2(-1.0f, -1.0f) * tap);
+    float b = sampleDog(coord + vec2(0.0f, -1.0f) * tap);
+    float br = sampleDog(coord + vec2(1.0f, -1.0f) * tap);
+    float l = sampleDog(coord + vec2(-1.0f, 0.0f) * tap);
+    float r = sampleDog(coord + vec2(1.0f, 0.0f) * tap);
+    float tl = sampleDog(coord + vec2(-1.0f, 1.0f) * tap);
+    float t = sampleDog(coord + vec2(0.0f, 1.0f) * tap);
+    float tr = sampleDog(coord + vec2(1.0f, 1.0f) * tap);
 
     float gx = ((tr + 2.0f * r + br) - (tl + 2.0f * l + bl)) / 4.0f;
     float gy = ((tl + 2.0f * t + tr) - (bl + 2.0f * b + br)) / 4.0f;
@@ -77,8 +76,12 @@ void main() {
     int idx = row * 4 + col;
     float bayerValue = float(bayer[idx]);
 
-    vec2 blockOrigin = cellCoord * BLOCK_SIZE;
-    vec2 blockCenterUV = (blockOrigin + (BLOCK_SIZE * 0.5f)) / u_resolution;
+    // One tile covers this many render pixels; the 8x8 sub-samples and the
+    // Sobel tap scale with it, so edge scale follows the webcam resolution.
+    vec2 block = u_resolution / u_tileResolution;
+    vec2 tap = block / 8.0;
+    vec2 blockOrigin = cellCoord * block;
+    vec2 blockCenterUV = (blockOrigin + block * 0.5f) / u_resolution;
 
     vec3 tileColor = texture(u_video, blockCenterUV).rgb;
     float lum = getLuminance(tileColor);
@@ -93,12 +96,12 @@ void main() {
     histogram[3] = 0.0f;
     histogram[4] = 0.0f;
 
-    for(float y = 0.5f; y < BLOCK_SIZE; y += 1.0f) {
-        for(float x = 0.5f; x < BLOCK_SIZE; x += 1.0f) {
-            vec2 samplePos = blockOrigin + vec2(x, y);
+    for(int j = 0; j < 8; j++) {
+        for(int i = 0; i < 8; i++) {
+            vec2 samplePos = blockOrigin + (vec2(float(i), float(j)) + 0.5f) * tap;
             float weight;
-            int edgeType = evaluatePixelEdge(samplePos, weight);
-            histogram[edgeType] += weight  - u_edgeThreshold;
+            int edgeType = evaluatePixelEdge(samplePos, tap, weight);
+            histogram[edgeType] += weight - u_edgeThreshold;
         }
     }
 
