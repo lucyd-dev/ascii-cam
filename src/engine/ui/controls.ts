@@ -27,6 +27,7 @@ export function buildControls(
 		const label = document.createElement('span');
 		label.className = 'afx-control-label';
 		label.textContent = p.label;
+		if (p.description) label.title = p.description;
 
 		const reset = createIconButton('rotate-ccw', `Reset ${p.label}`, () => {
 			settings.resetKey(p.key);

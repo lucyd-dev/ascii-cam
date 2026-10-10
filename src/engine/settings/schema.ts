@@ -13,6 +13,8 @@ export interface ParamOption {
 export interface SchemaParam {
 	key: string;
 	label: string;
+	/** Optional tooltip shown when hovering the control's label. */
+	description?: string;
 	kind: ParamKind;
 	default: number | boolean | string;
 	min?: number;

@@ -1,8 +1,3 @@
-// The effect's parameter schema. This file is the project-side config:
-// every parameter becomes a UI control whose value drives a uniform (same
-// name). Categories become the collapsible groups in the settings dropdown.
-// Adding a control = add one entry here + declare the uniform in the shader.
-
 import type { SchemaCategory } from '../engine';
 import { PALETTES } from './palettes';
 
@@ -13,12 +8,14 @@ export const CATEGORIES: SchemaCategory[] = [
 			{
 				key: 'u_monochromic',
 				label: 'Monochrome',
+				description: 'Tint glyphs with the palette ramp instead of the webcam colors',
 				kind: 'toggle',
 				default: true,
 			},
 			{
 				key: 'u_palette',
 				label: 'Palette',
+				description: 'Color ramp used when Monochrome is on',
 				kind: 'select',
 				default: 'purple',
 				options: PALETTES.map((p) => ({ value: p.name, label: p.label })),
@@ -31,6 +28,7 @@ export const CATEGORIES: SchemaCategory[] = [
 			{
 				key: 'u_glowStrength',
 				label: 'Glow',
+				description: 'Intensity of the bloom glow added over the ASCII image',
 				kind: 'range',
 				default: 0.5,
 				min: 0,
@@ -40,6 +38,7 @@ export const CATEGORIES: SchemaCategory[] = [
 			{
 				key: 'u_bloomThreshold',
 				label: 'Bloom Threshold',
+				description: 'Luminance above which highlights start to bleed',
 				kind: 'range',
 				default: 0.35,
 				min: 0,
@@ -49,6 +48,7 @@ export const CATEGORIES: SchemaCategory[] = [
 			{
 				key: 'u_bloomKnee',
 				label: 'Bloom Knee',
+				description: 'Softness of the bloom threshold transition',
 				kind: 'range',
 				default: 0.4,
 				min: 0,
@@ -63,6 +63,7 @@ export const CATEGORIES: SchemaCategory[] = [
 			{
 				key: 'u_edgeThreshold',
 				label: 'Edge Sensitivity',
+				description: 'Sobel edge sensitivity; lower picks up fainter edges',
 				kind: 'range',
 				default: 0.12,
 				min: 0.0,
@@ -72,6 +73,7 @@ export const CATEGORIES: SchemaCategory[] = [
 			{
 				key: 'u_minEdgeVotes',
 				label: 'Edge Votes',
+				description: 'Edge votes a tile needs before it becomes an edge tile',
 				kind: 'range',
 				default: 0.85,
 				min: 0,
@@ -81,6 +83,7 @@ export const CATEGORIES: SchemaCategory[] = [
 			{
 				key: 'u_dogGain',
 				label: 'Edge Gain',
+				description: 'Contrast gain applied to the edge signal',
 				kind: 'range',
 				default: 8,
 				min: 0,
@@ -93,10 +96,9 @@ export const CATEGORIES: SchemaCategory[] = [
 		label: 'Temporal',
 		params: [
 			{
-				// NOTE: lower = stronger temporal smoothing (less noise/flicker, more
-				// ghosting). The label reads inverted relative to its value.
 				key: 'u_emaAlpha',
 				label: 'Anti-Flicker',
+				description: 'Temporal blend; lower smooths more (less flicker, more ghosting)',
 				kind: 'range',
 				default: 0.45,
 				min: 0.05,
@@ -104,10 +106,9 @@ export const CATEGORIES: SchemaCategory[] = [
 				step: 0.05,
 			},
 			{
-				// How much the edge signal must differ from the smoothed history before
-				// the temporal blend opens up (0 = freeze, threshold = full response).
 				key: 'u_motionThreshold',
 				label: 'Motion Threshold',
+				description: 'Change needed before motion overrides the smoothing',
 				kind: 'range',
 				default: 0.18,
 				min: 0.02,
@@ -122,6 +123,7 @@ export const CATEGORIES: SchemaCategory[] = [
 			{
 				key: 'u_ditherStrength',
 				label: 'Dither',
+				description: 'Dither amount to break up banding in flat areas',
 				kind: 'range',
 				default: 0.6,
 				min: 0,

@@ -23,7 +23,14 @@ const gl = createGLContext(canvas);
 const quad = new FullScreenQuad(gl);
 // Parameters are grouped into labelled categories; every param belongs to one.
 const settings = new SettingsStore(
-	[{ label: 'General', params: [{ key: 'u_gain', label: 'Gain', kind: 'range', default: 1 }] }],
+	[
+		{
+			label: 'General',
+			params: [
+				{ key: 'u_gain', label: 'Gain', description: 'Output brightness', kind: 'range', default: 1 },
+			],
+		},
+	],
 	'app.settings',
 );
 
@@ -77,7 +84,9 @@ pipeline.draw();
 3. Add any tunable uniform to a category in the settings schema — a control
    appears in the overlay automatically (each category is its own dropdown;
    each row has its own reset, enabled only on deviation) and the value
-   persists. Dropdown open state and the selected debug output persist too.
+   persists. An optional `description` on the param shows as a tooltip when
+   hovering the label. Dropdown open state and the selected debug output
+   persist too.
 
 ## Overlay
 
