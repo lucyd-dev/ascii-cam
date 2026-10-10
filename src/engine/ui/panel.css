@@ -62,6 +62,11 @@
 	opacity: 1;
 }
 
+.afx-icon-btn:disabled {
+	opacity: 0.25;
+	cursor: default;
+}
+
 .afx-icon-btn svg {
 	width: 15px;
 	height: 15px;
@@ -102,21 +107,16 @@
 	font-weight: 700;
 }
 
-/* ---- settings dropdown ---- */
+/* ---- settings categories (nested dropdowns) ---- */
 
-.afx-settings {
-	margin-top: 6px;
-	padding-top: 6px;
-	border-top: 1px solid var(--afx-border);
-}
-
-.afx-settings summary {
-	cursor: pointer;
-	font-weight: 700;
-}
-
-.afx-controls {
+.afx-group {
 	margin-top: 4px;
+}
+
+.afx-group > summary {
+	cursor: pointer;
+	font-weight: 600;
+	opacity: 0.9;
 }
 
 .afx-reset-all {
@@ -138,6 +138,16 @@
 .afx-reset-all:hover {
 	background: var(--afx-accent);
 	color: #0d0d0d;
+}
+
+.afx-reset-all:disabled {
+	opacity: 0.4;
+	cursor: default;
+}
+
+.afx-reset-all:disabled:hover {
+	background: var(--afx-accent-dim);
+	color: var(--afx-accent);
 }
 
 .afx-reset-all svg {
@@ -192,23 +202,34 @@
 /* ---- debug output divider + passes / GPU timings dropdowns ---- */
 
 .afx-separator {
-	margin-top: 6px;
+	margin: 6px 0px;
 	border-top: 1px solid var(--afx-border);
 }
 
+.afx-settings,
 .afx-passes,
 .afx-timings {
 	margin-top: 6px;
 }
 
-.afx-passes summary,
-.afx-timings summary {
+.afx-settings > summary,
+.afx-passes > summary,
+.afx-timings > summary {
 	cursor: pointer;
 	font-weight: 700;
 }
 
-.afx-passes-list {
+.afx-controls,
+.afx-passes-list,
+.afx-timings-content,
+.afx-group-controls {
 	margin-top: 4px;
+	padding-left: 8px;
+	border-left: 1px solid var(--afx-border);
+}
+
+.afx-group-controls {
+	margin-top: 2px;
 }
 
 .afx-pass {
@@ -224,19 +245,28 @@
 }
 
 .afx-timings-list {
-	margin-top: 4px;
+	margin-top: 0;
 }
 
+.afx-timing-header,
 .afx-timing-row {
-	display: flex;
-	justify-content: space-between;
-	gap: 12px;
+	display: grid;
+	grid-template-columns: 1fr 48px 64px;
+	gap: 8px;
+	align-items: baseline;
 }
 
-.afx-timing-metrics {
-	display: flex;
-	align-items: baseline;
-	gap: 6px;
+.afx-timing-header {
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	opacity: 0.5;
+}
+
+.afx-timing-header span:not(:first-child),
+.afx-timing-value,
+.afx-timing-range {
+	text-align: right;
 }
 
 .afx-timing-value {
@@ -244,10 +274,15 @@
 }
 
 .afx-timing-range {
-	opacity: 0.5;
-	font-size: 10px;
-	min-width: 46px;
-	text-align: right;
+	opacity: 0.65;
+	font-size: 11px;
+}
+
+.afx-timing-all {
+	margin-top: 4px;
+	padding-top: 4px;
+	border-top: 1px solid var(--afx-border);
+	font-weight: 700;
 }
 
 .afx-timings-empty {

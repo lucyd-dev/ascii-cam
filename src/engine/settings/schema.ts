@@ -21,4 +21,11 @@ export interface SchemaParam {
 	options?: ParamOption[];
 }
 
+// A labelled group of parameters. Every parameter belongs to exactly one
+// category; the UI renders one collapsible dropdown per category.
+export interface SchemaCategory {
+	label: string;
+	params: SchemaParam[];
+}
+
 export type SettingsValue = number | boolean | string;

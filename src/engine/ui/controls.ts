@@ -1,15 +1,26 @@
 // Builds the controls UI for a settings store, straight from its schema.
-// Each control reads its initial value from the store (default or persisted)
-// and writes changes back through `settings.set`, which persists them.
-// Every row has its own reset icon; a global reset lives in the overlay header.
+// Every schema category becomes a collapsible dropdown; the rows inside read
+// their initial value from the store (default or persisted) and write changes
+// back through `settings.set`, which persists them. Per-row and global reset
+// buttons are enabled only while a value differs from its default.
 
 import type { SettingsStore } from '../settings/store';
+import type { SchemaParam, SettingsValue } from '../settings/schema';
+import type { UiState } from './ui-state';
+import { createDetails } from './details';
 import { createIconButton, iconHtml } from './icons';
 
-export function buildControls(container: HTMLElement, settings: SettingsStore): void {
+export function buildControls(
+	container: HTMLElement,
+	settings: SettingsStore,
+	uiState?: UiState,
+): void {
 	container.innerHTML = ''; // makes re-building (e.g. after reset) safe
 
-	for (const p of settings.getParameters()) {
+	const rebind = () => buildControls(container, settings, uiState);
+	let refreshGlobal: () => void = () => {};
+
+	const buildRow = (p: SchemaParam): HTMLDivElement => {
 		const row = document.createElement('div');
 		row.className = 'afx-control';
 
@@ -17,13 +28,23 @@ export function buildControls(container: HTMLElement, settings: SettingsStore): 
 		label.className = 'afx-control-label';
 		label.textContent = p.label;
 
+		const reset = createIconButton('rotate-ccw', `Reset ${p.label}`, () => {
+			settings.resetKey(p.key);
+			rebind();
+		});
+		const syncReset = () => (reset.disabled = settings.isDefault(p.key));
+
+		const onChange = (value: SettingsValue) => {
+			settings.set(p.key, value);
+			syncReset();
+			refreshGlobal();
+		};
+
 		if (p.kind === 'toggle') {
 			const input = document.createElement('input');
 			input.type = 'checkbox';
 			input.checked = Boolean(settings.get(p.key));
-			input.addEventListener('input', () => {
-				settings.set(p.key, input.checked);
-			});
+			input.addEventListener('input', () => onChange(input.checked));
 			row.append(label, input);
 		} else if (p.kind === 'select') {
 			const select = document.createElement('select');
@@ -31,12 +52,10 @@ export function buildControls(container: HTMLElement, settings: SettingsStore): 
 				const el = document.createElement('option');
 				el.value = option.value;
 				el.textContent = option.label ?? option.value;
-				select.appendChild(el);
+				select.append(el);
 			}
 			select.value = String(settings.get(p.key));
-			select.addEventListener('change', () => {
-				settings.set(p.key, select.value);
-			});
+			select.addEventListener('change', () => onChange(select.value));
 			row.append(label, select);
 		} else {
 			const input = document.createElement('input');
@@ -52,20 +71,30 @@ export function buildControls(container: HTMLElement, settings: SettingsStore): 
 			show();
 
 			input.addEventListener('input', () => {
-				settings.set(p.key, parseFloat(input.value));
+				onChange(parseFloat(input.value));
 				show();
 			});
 			row.append(label, input, readout);
 		}
 
-		row.append(
-			createIconButton('rotate-ccw', `Reset ${p.label}`, () => {
-				settings.resetKey(p.key);
-				buildControls(container, settings);
-			}),
+		syncReset();
+		row.append(reset);
+		return row;
+	};
+
+	for (const category of settings.getCategories()) {
+		const details = createDetails(
+			'afx-group',
+			category.label,
+			uiState,
+			`group:${category.label}`,
 		);
 
-		container.appendChild(row);
+		const body = document.createElement('div');
+		body.className = 'afx-group-controls';
+		for (const p of category.params) body.append(buildRow(p));
+		details.append(body);
+		container.append(details);
 	}
 
 	const resetAll = document.createElement('button');
@@ -78,7 +107,12 @@ export function buildControls(container: HTMLElement, settings: SettingsStore): 
 	resetAll.append(label);
 	resetAll.addEventListener('click', () => {
 		settings.reset();
-		buildControls(container, settings);
+		rebind();
 	});
-	container.appendChild(resetAll);
+	container.append(resetAll);
+
+	refreshGlobal = () => {
+		resetAll.disabled = settings.getParameters().every((p) => settings.isDefault(p.key));
+	};
+	refreshGlobal();
 }

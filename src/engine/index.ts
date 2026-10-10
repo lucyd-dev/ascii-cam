@@ -45,7 +45,13 @@ export type {
 
 // ---- settings ----
 export { SettingsStore } from './settings/store';
-export type { SchemaParam, ParamKind, ParamOption, SettingsValue } from './settings/schema';
+export type {
+	SchemaCategory,
+	SchemaParam,
+	ParamKind,
+	ParamOption,
+	SettingsValue,
+} from './settings/schema';
 
 // ---- ui ----
 export { FpsMeter } from './ui/fps';

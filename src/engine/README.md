@@ -21,7 +21,11 @@ engine/
 ```ts
 const gl = createGLContext(canvas);
 const quad = new FullScreenQuad(gl);
-const settings = new SettingsStore(PARAMS, 'app.settings');
+// Parameters are grouped into labelled categories; every param belongs to one.
+const settings = new SettingsStore(
+	[{ label: 'General', params: [{ key: 'u_gain', label: 'Gain', kind: 'range', default: 1 }] }],
+	'app.settings',
+);
 
 const pipeline = new Pipeline(gl, quad, {
 	mainSize: { width: 1920, height: 1080 },
@@ -70,8 +74,10 @@ pipeline.draw();
 1. Write `myshader.frag`.
 2. Add a `buffer` (if it needs an offscreen target) and a `pass` entry in the
    effect's pipeline definition.
-3. Add any tunable uniform to the settings schema — a control appears in the
-   overlay automatically (each row has its own reset) and the value persists.
+3. Add any tunable uniform to a category in the settings schema — a control
+   appears in the overlay automatically (each category is its own dropdown;
+   each row has its own reset, enabled only on deviation) and the value
+   persists. Dropdown open state and the selected debug output persist too.
 
 ## Overlay
 

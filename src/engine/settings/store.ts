@@ -4,26 +4,42 @@
 // defaults, are overlaid with localStorage, and are pushed into any program
 // that declares the matching uniform.
 
-import type { SchemaParam, SettingsValue } from './schema';
+import type { SchemaCategory, SchemaParam, SettingsValue } from './schema';
 import type { UniformApplier } from '../pass/pass';
 
 export class SettingsStore implements UniformApplier {
 	private values: Record<string, SettingsValue> = {};
 	private locations = new Map<WebGLProgram, Map<string, WebGLUniformLocation | null>>();
+	private categories: SchemaCategory[];
 	private params: SchemaParam[];
 	private storageKey: string;
 
-	constructor(params: SchemaParam[], storageKey: string) {
-		this.params = params;
+	constructor(categories: SchemaCategory[], storageKey: string) {
+		this.categories = categories;
+		this.params = categories.flatMap((category) => category.params);
 		this.storageKey = storageKey;
 		const stored = JSON.parse(localStorage.getItem(storageKey) ?? '{}');
-		for (const p of params) {
+		for (const p of this.params) {
 			this.values[p.key] = p.key in stored ? stored[p.key] : p.default;
 		}
 	}
 
+	getCategories(): readonly SchemaCategory[] {
+		return this.categories;
+	}
+
 	getParameters(): readonly SchemaParam[] {
 		return this.params;
+	}
+
+	getStorageKey(): string {
+		return this.storageKey;
+	}
+
+	/** True when the value still equals the schema default. */
+	isDefault(key: string): boolean {
+		const param = this.params.find((p) => p.key === key);
+		return param ? this.values[key] === param.default : true;
 	}
 
 	get(key: string): SettingsValue | undefined {

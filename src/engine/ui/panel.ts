@@ -1,17 +1,20 @@
-// Engine overlay: the ReShade-style on-screen panel.
-// It combines an FPS readout and the generated settings controls, and can be
-// mounted either via TypeScript (createEngineOverlay) or with a marker
-// element in the HTML (mountEngineOverlay looks up [data-engine-overlay]).
+// Engine overlay: the ReShade-style on-screen panel. It combines an FPS
+// readout, the generated settings controls, and optional pipeline tools
+// (debug output, pass bypass, GPU timings). Mount it with mountEngineOverlay
+// (looks up [data-engine-overlay]) or createEngineOverlay(container, ...).
 
 import './panel.css';
 import { FpsMeter } from './fps';
 import { buildControls } from './controls';
 import { createIconButton } from './icons';
+import { createDetails } from './details';
+import { createTimingsTable, type TimingsTable } from './timings';
+import { UiState } from './ui-state';
+import { el } from './dom';
 import type { SettingsStore } from '../settings/store';
 import type { PassTiming } from '../gl/gpu-timer';
 
-// Engine-owned pipeline controls the overlay can render: debug output
-// selection, per-pass bypass and GPU timings. Pipeline implements this struct.
+// Engine-owned pipeline capabilities the overlay renders. Pipeline implements it.
 export interface PipelineControls {
 	getBufferNames(): string[];
 	getDebugView(): string;
@@ -27,21 +30,15 @@ export interface EngineOverlayOptions {
 	showFps?: boolean;
 	showControls?: boolean;
 	showTimings?: boolean;
-	/** Engine-owned debug output (buffer) selector, built from the pipeline. */
 	showDebugOutput?: boolean;
-	/** Engine-owned per-pass enable/disable toggles. */
 	showPasses?: boolean;
-	/** "Save PNG" header icon; fires onScreenshot when clicked. */
 	showScreenshot?: boolean;
-	/** Pipeline to query for debug buffers / passes / timings. */
 	pipeline?: PipelineControls;
 	onScreenshot?: () => void;
-	selector?: string; // container selector used by mountEngineOverlay
+	selector?: string;
 }
 
-// The handle returned by the overlay factories. beginFrame/endFrame wrap one
-// frame; the FPS meter and (if a pipeline is provided) the GPU timings are
-// updated automatically.
+// Wraps one frame; the FPS meter and (with a pipeline) GPU timings update here.
 export interface EngineMonitor {
 	beginFrame(): number;
 	endFrame(): void;
@@ -67,193 +64,117 @@ export function createEngineOverlay(
 	container.classList.add('afx-overlay');
 	container.innerHTML = '';
 
-	const header = document.createElement('div');
-	header.className = 'afx-header';
+	const uiState = new UiState(`${settings.getStorageKey()}.ui`);
+	const { header, fpsElement } = createHeader(title, showFps, showScreenshot, onScreenshot);
+	container.append(header, el('div', 'afx-separator'));
 
-	const main = document.createElement('div');
-	main.className = 'afx-header-main';
-	if (title) {
-		const el = document.createElement('div');
-		el.className = 'afx-overlay-title';
-		el.textContent = title;
-		main.append(el);
+	if (showDebugOutput && pipeline) container.append(createDebugOutput(pipeline, uiState));
+	if (showControls) container.append(createSettings(settings, uiState));
+	if (showPasses && pipeline) container.append(createPasses(pipeline, uiState));
+
+	let timings: TimingsTable | null = null;
+	if (showTimings) {
+		timings = createTimingsTable();
+		const details = createDetails('afx-timings', 'GPU passes', uiState, 'timings');
+		details.append(timings.element);
+		container.append(details);
 	}
-	const fpsElement = document.createElement('span');
-	fpsElement.className = 'afx-fps';
+
+	const fps = new FpsMeter(showFps ? fpsElement : null);
+	return {
+		beginFrame: () => fps.beginFrame(),
+		endFrame: () => {
+			fps.endFrame();
+			if (timings && pipeline) timings.update(pipeline.getTimingStats());
+		},
+	};
+}
+
+function createHeader(
+	title: string,
+	showFps: boolean,
+	showScreenshot: boolean,
+	onScreenshot?: () => void,
+): { header: HTMLElement; fpsElement: HTMLElement } {
+	const header = el('div', 'afx-header');
+	const main = el('div', 'afx-header-main');
+	if (title) main.append(el('div', 'afx-overlay-title', title));
+
+	const fpsElement = el('span', 'afx-fps');
 	if (showFps) {
-		const row = document.createElement('div');
-		row.className = 'afx-overlay-row';
+		const row = el('div', 'afx-overlay-row');
 		row.append(fpsElement, document.createTextNode(' fps'));
 		main.append(row);
 	}
 	header.append(main);
 
 	if (showScreenshot) {
-		const actions = document.createElement('div');
-		actions.className = 'afx-header-actions';
+		const actions = el('div', 'afx-header-actions');
 		actions.append(createIconButton('download', 'Save PNG', () => onScreenshot?.()));
 		header.append(actions);
 	}
-	container.append(header);
+	return { header, fpsElement };
+}
 
-	// ---- settings (collapsed by default) ----
-	if (showControls) {
-		const details = document.createElement('details');
-		details.className = 'afx-settings';
-		const summary = document.createElement('summary');
-		summary.textContent = 'Settings';
-		details.append(summary);
+function createDebugOutput(pipeline: PipelineControls, uiState: UiState): HTMLElement {
+	const row = el('div', 'afx-control');
+	row.append(el('span', 'afx-control-label', 'Debug Output'));
 
-		const controls = document.createElement('div');
-		controls.className = 'afx-controls';
-		buildControls(controls, settings);
-		details.append(controls);
-		container.append(details);
+	const select = el('select');
+	const views = [...pipeline.getBufferNames(), 'final'];
+	for (const name of views) {
+		const option = el('option');
+		option.value = name;
+		option.textContent = name;
+		select.append(option);
+	}
+	const stored = uiState.getString('debugView', pipeline.getDebugView());
+	if (views.includes(stored)) pipeline.setDebugView(stored);
+	select.value = pipeline.getDebugView();
+
+	const reset = createIconButton('rotate-ccw', 'Reset Debug Output', () => {
+		pipeline.setDebugView('final');
+		select.value = 'final';
+		uiState.set('debugView', 'final');
+		sync();
+	});
+	function sync(): void {
+		reset.disabled = pipeline.getDebugView() === 'final';
 	}
 
-	// ---- debug output ----
-	if (showDebugOutput && pipeline) {
-		const row = document.createElement('div');
-		row.className = 'afx-control';
-		const label = document.createElement('span');
-		label.className = 'afx-control-label';
-		label.textContent = 'Debug Output';
-		const select = document.createElement('select');
-		for (const name of [...pipeline.getBufferNames(), 'final']) {
-			const option = document.createElement('option');
-			option.value = name;
-			option.textContent = name;
-			select.append(option);
-		}
-		select.value = pipeline.getDebugView();
-		select.addEventListener('change', () => pipeline.setDebugView(select.value));
-		row.append(label, select);
-		row.append(
-			createIconButton('rotate-ccw', 'Reset Debug Output', () => {
-				pipeline.setDebugView('final');
-				select.value = 'final';
-			}),
-		);
-		container.append(row);
+	select.addEventListener('change', () => {
+		pipeline.setDebugView(select.value);
+		uiState.set('debugView', select.value);
+		sync();
+	});
+
+	row.append(select, reset);
+	sync();
+	return row;
+}
+
+function createSettings(settings: SettingsStore, uiState: UiState): HTMLElement {
+	const details = createDetails('afx-settings', 'Settings', uiState, 'settings');
+	const controls = el('div', 'afx-controls');
+	buildControls(controls, settings, uiState);
+	details.append(controls);
+	return details;
+}
+
+function createPasses(pipeline: PipelineControls, uiState: UiState): HTMLElement {
+	const details = createDetails('afx-passes', 'Passes', uiState, 'passes');
+	const list = el('div', 'afx-passes-list');
+	for (const name of pipeline.getPassNames()) {
+		const row = el('label', 'afx-pass');
+		const input = el('input');
+		input.type = 'checkbox';
+		input.checked = pipeline.isPassEnabled(name);
+		input.addEventListener('change', () => pipeline.setPassEnabled(name, input.checked));
+		row.append(input, el('span', undefined, name));
+		list.append(row);
 	}
-
-	if ((showPasses && pipeline) || showTimings) {
-		const separator = document.createElement('div');
-		separator.className = 'afx-separator';
-		container.append(separator);
-	}
-
-	if (showPasses && pipeline) {
-		const details = document.createElement('details');
-		details.className = 'afx-passes';
-		const summary = document.createElement('summary');
-		summary.textContent = 'Passes';
-		details.append(summary);
-
-		const list = document.createElement('div');
-		list.className = 'afx-passes-list';
-		for (const name of pipeline.getPassNames()) {
-			const row = document.createElement('label');
-			row.className = 'afx-pass';
-			const input = document.createElement('input');
-			input.type = 'checkbox';
-			input.checked = pipeline.isPassEnabled(name);
-			input.addEventListener('change', () => pipeline.setPassEnabled(name, input.checked));
-			const text = document.createElement('span');
-			text.textContent = name;
-			row.append(input, text);
-			list.append(row);
-		}
-		details.append(list);
-		container.append(details);
-	}
-
-	let timingList: HTMLElement | null = null;
-	const timingRows = new Map<string, { avg: HTMLElement; range: HTMLElement }>();
-	let latestStats: ReadonlyMap<string, PassTiming> = new Map();
-
-	if (showTimings) {
-		const details = document.createElement('details');
-		details.className = 'afx-timings';
-		const summary = document.createElement('summary');
-		summary.textContent = 'GPU passes';
-		details.append(summary);
-
-		timingList = document.createElement('div');
-		timingList.className = 'afx-timings-list';
-		const empty = document.createElement('div');
-		empty.className = 'afx-timings-empty';
-		empty.textContent = 'waiting for GPU…';
-		timingList.append(empty);
-		details.append(timingList);
-
-		const copy = document.createElement('button');
-		copy.type = 'button';
-		copy.className = 'afx-timings-copy';
-		copy.textContent = 'Copy averages';
-		copy.addEventListener('click', () => {
-			const lines = [...latestStats].map(
-				([name, s]) =>
-					`${name.padEnd(10)} avg ${s.avg.toFixed(2)} ms   min ${s.min.toFixed(2)}   max ${s.max.toFixed(2)}   (n=${s.count})`,
-			);
-			const text = ['pass       stats (ms)', ...lines].join('\n');
-			void navigator.clipboard?.writeText(text);
-			console.log(`[GPU passes]\n${text}`);
-			copy.textContent = 'Copied!';
-			window.setTimeout(() => (copy.textContent = 'Copy averages'), 1200);
-		});
-		details.append(copy);
-
-		// If nothing arrives within a few frames, the timer-query extension is
-		// most likely unsupported by this browser/driver.
-		window.setTimeout(() => {
-			if (timingRows.size === 0 && empty.isConnected) {
-				empty.textContent = 'GPU timing not supported';
-			}
-		}, 3000);
-
-		container.append(details);
-	}
-
-	const fps = new FpsMeter(showFps ? fpsElement : null);
-
-	const updateTimings = (stats: ReadonlyMap<string, PassTiming>): void => {
-		if (!timingList || stats.size === 0) return;
-		latestStats = stats;
-		const empty = timingList.querySelector<HTMLElement>('.afx-timings-empty');
-		if (empty) empty.remove();
-
-		for (const [name, s] of stats) {
-			let cells = timingRows.get(name);
-			if (!cells) {
-				const row = document.createElement('div');
-				row.className = 'afx-timing-row';
-				const label = document.createElement('span');
-				label.textContent = name;
-				const metrics = document.createElement('span');
-				metrics.className = 'afx-timing-metrics';
-				const avg = document.createElement('span');
-				avg.className = 'afx-timing-value';
-				const range = document.createElement('span');
-				range.className = 'afx-timing-range';
-				metrics.append(avg, range);
-				row.append(label, metrics);
-				timingList.append(row);
-				cells = { avg, range };
-				timingRows.set(name, cells);
-			}
-			cells.avg.textContent = `${s.avg.toFixed(2)} ms`;
-			cells.range.textContent = `${s.min.toFixed(1)}–${s.max.toFixed(1)}`;
-		}
-	};
-
-	return {
-		beginFrame: () => fps.beginFrame(),
-		endFrame: () => {
-			fps.endFrame();
-			if (pipeline && showTimings) updateTimings(pipeline.getTimingStats());
-		},
-	};
+	details.append(list);
+	return details;
 }
 
 // Mounts the overlay onto an element found via a marker attribute,
