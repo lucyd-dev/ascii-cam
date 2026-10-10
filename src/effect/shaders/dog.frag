@@ -14,14 +14,12 @@ float getLuminance(vec3 color) {
     return dot(color, vec3(0.2126, 0.7152, 0.0722));
 }
 
-// Sample directly in normalized texture space
 float sampleLum(vec2 uvOffset) {
     vec2 uv = clamp(v_uv + uvOffset / u_resolution, vec2(0.0), vec2(1.0));
     return getLuminance(texture(u_video, uv).rgb);
 }
 
 void main() {
-    // 1. Narrow Gaussian (Radius 1)
     float narrow =
         (sampleLum(vec2(-1.0, -1.0)) + sampleLum(vec2( 1.0, -1.0)) +
          sampleLum(vec2(-1.0,  1.0)) + sampleLum(vec2( 1.0,  1.0))) * 1.0 +
@@ -30,7 +28,6 @@ void main() {
         sampleLum(vec2(0.0, 0.0)) * 4.0;
     narrow /= 16.0;
 
-    // 2. Wide Gaussian (Radius 2)
     float wide =
         (sampleLum(vec2(-2.0, -2.0)) + sampleLum(vec2( 2.0, -2.0)) +
          sampleLum(vec2(-2.0,  2.0)) + sampleLum(vec2( 2.0,  2.0))) * 1.0 +

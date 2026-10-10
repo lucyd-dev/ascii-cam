@@ -70,6 +70,8 @@ export interface PassSpec {
 	output?: string | { buffer: string; side?: BufferSide };
 	/** ping-pong buffer names to swap after this pass. */
 	swap?: string[];
+	/** When false the pass is skipped (debug bypass); default true. */
+	enabled?: boolean;
 	/** static uniforms: number, [x], [x,y], [x,y,z], [x,y,z,w],
 	 *  { size } -> (w,h), { texel } -> (1/w,1/h). */
 	uniforms?: Record<string, UniformValue>;
@@ -93,6 +95,7 @@ interface Task {
 	output: () => RenderTarget | null;
 	inputs: Array<{ unit: number; texture: () => WebGLTexture }>;
 	swaps: PingPong[];
+	enabled: boolean;
 }
 
 export class Pipeline {
@@ -109,6 +112,7 @@ export class Pipeline {
 	private tasks: Task[] = [];
 	private presentPass: PresentPass | null = null;
 	private timer: GpuTimer | null = null;
+	private debugView = 'final';
 
 	constructor(gl: WebGL2RenderingContext, quad: FullScreenQuad, options: PipelineOptions) {
 		this.gl = gl;
@@ -143,6 +147,29 @@ export class Pipeline {
 		return [...this.buffers.keys()];
 	}
 
+	getPassNames(): string[] {
+		return this.tasks.map((task) => task.name);
+	}
+
+	isPassEnabled(name: string): boolean {
+		return this.tasks.find((task) => task.name === name)?.enabled ?? false;
+	}
+
+	setPassEnabled(name: string, enabled: boolean): void {
+		const task = this.tasks.find((task) => task.name === name);
+		if (task) task.enabled = enabled;
+	}
+
+	// Debug output: which buffer (if any) is shown instead of the final image.
+	// 'final' (default) shows the normal result.
+	getDebugView(): string {
+		return this.debugView;
+	}
+
+	setDebugView(name: string): void {
+		this.debugView = name;
+	}
+
 	// Last resolved per-pass GPU time in milliseconds (empty if timing is off
 	// or the timer-query extension is unavailable). Results lag a few frames.
 	getTimings(): ReadonlyMap<string, number> {
@@ -157,6 +184,7 @@ export class Pipeline {
 	draw(): void {
 		const gl = this.gl;
 		for (const task of this.tasks) {
+			if (!task.enabled) continue;
 			const target = task.output();
 			if (target) task.pass.bindOutput(target);
 			else task.pass.bindScreen();
@@ -172,11 +200,15 @@ export class Pipeline {
 
 		// Swap ping-pong buffers AFTER every pass has read/written this frame,
 		// so "src" always holds the most recent output at the start of draw().
+		// Disabled passes neither render nor swap.
 		for (const task of this.tasks) {
+			if (!task.enabled) continue;
 			for (const ping of task.swaps) ping.swap();
 		}
 
 		this.timer?.poll();
+
+		if (this.debugView !== 'final') this.present(this.debugView);
 	}
 
 	// Shows one named buffer on the screen (debug inspection).
@@ -223,7 +255,7 @@ export class Pipeline {
 			else throw new Error(`Pipeline: [${label}] swap target "${name}" is not a ping-pong buffer.`);
 		}
 
-		return { name: label, pass, output, inputs, swaps };
+		return { name: label, pass, output, inputs, swaps, enabled: spec.enabled ?? true };
 	}
 
 	// Throws if `ref` does not name a declared texture or buffer.
@@ -251,7 +283,6 @@ export class Pipeline {
 		if (typeof ref === 'string') {
 			const texture = this.textures.get(ref);
 			if (texture) return texture; // external texture (video, atlases)
-			// otherwise treat the name as a buffer
 			const buffer = this.buffers.get(ref);
 			if (buffer instanceof PingPong) return buffer.dst.texture;
 			if (buffer) return buffer.texture;

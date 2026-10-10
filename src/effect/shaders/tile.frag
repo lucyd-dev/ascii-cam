@@ -5,8 +5,8 @@ out vec4 fragColor;
 
 uniform sampler2D u_video;
 uniform sampler2D u_dogTexture;
-uniform vec2 u_resolution;     // 1920.0, 1080.0
-uniform vec2 u_tileResolution; // 240.0, 135.0
+uniform vec2 u_resolution;
+uniform vec2 u_tileResolution;
 
 const float BLOCK_SIZE = 8.0f;
 const float PI = 3.14159265359f;
@@ -26,19 +26,16 @@ const int bayer[16] = int[16](
 );
 uniform float u_ditherStrength;
 
-// Rec. 709 luminance
 float getLuminance(vec3 color) {
     return dot(color, vec3(0.2126f, 0.7152f, 0.0722f));
 }
 
-// Sample DoG buffer
 float sampleDog(vec2 coord) {
     vec2 clamped = clamp(coord, vec2(0.0f), u_resolution - 1.0f);
     vec2 fboUV = clamped / u_resolution;
     return texture(u_dogTexture, fboUV).r;
 }
 
-// Sobel evaluation on DoG buffer
 int evaluatePixelEdge(vec2 coord, out float edgeResponse) {
     float bl = sampleDog(coord + vec2(-1.0f, -1.0f));
     float b = sampleDog(coord + vec2(0.0f, -1.0f));
@@ -73,7 +70,6 @@ int evaluatePixelEdge(vec2 coord, out float edgeResponse) {
 }
 
 void main() {
-    // Top-left tile grid space
     vec2 cellCoord = floor(gl_FragCoord.xy);
 
     int col = int(cellCoord.x) % 4;
@@ -81,7 +77,6 @@ void main() {
     int idx = row * 4 + col;
     float bayerValue = float(bayer[idx]);
 
-    // Map cell position back to 1080p pixel coordinates
     vec2 blockOrigin = cellCoord * BLOCK_SIZE;
     vec2 blockCenterUV = (blockOrigin + (BLOCK_SIZE * 0.5f)) / u_resolution;
 
@@ -91,7 +86,6 @@ void main() {
     lum = clamp((lum - 0.08f) / 0.85f, 0.0f, 1.0f);
     lum = pow(lum, 0.75f);
 
-    // Histogram voting across 64 pixels (runs only once per tile)
     float histogram[5];
     histogram[0] = 0.0f;
     histogram[1] = 0.0f;
@@ -111,7 +105,6 @@ void main() {
     float  totalEdgeVotes = histogram[1] + histogram[2] + histogram[3] + histogram[4];
 
     if(totalEdgeVotes >= u_minEdgeVotes) {
-        // Find dominant edge direction
         int dominantEdge = 1;
         float  maxVotes = histogram[1];
 
@@ -128,14 +121,11 @@ void main() {
             dominantEdge = 4;
         }
 
-        // Output edge index (R) and edge flag = 1.0 (G)
         fragColor = vec4(float(dominantEdge) / 255.0f, 1.0f, lum, 1.0f);
     } else {
-        // add bayer dithering
         float offset = (bayerValue / 16.0 - 0.5) * u_ditherStrength;
         int fillIndex = int(clamp(floor(lum * FILL_GLYPH_COUNT + offset), 0.0f, FILL_GLYPH_COUNT - 1.0f));
 
-        // Output fill index (R) and edge flag = 0.0 (G)
         fragColor = vec4(float(fillIndex) / 255.0f, 0.0f, lum, 1.0f);
     }
 }

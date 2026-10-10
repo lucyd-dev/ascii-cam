@@ -2,7 +2,7 @@ import './style.css';
 import { AsciiRenderer } from './effect/renderer';
 import { startCamera } from './effect/camera';
 import { settings } from './effect/settings';
-import { createGLContext, loadTexture, mountEngineOverlay } from './engine';
+import { createGLContext, downloadCanvasPng, loadTexture, mountEngineOverlay } from './engine';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#glCanvas')!;
 const gl = createGLContext(canvas);
@@ -19,23 +19,35 @@ await startCamera(video, {
 
 const renderer = new AsciiRenderer(gl, { fillAtlas, edgeAtlas });
 
-// Populate the debug dropdown from the pipeline's actual buffers.
-settings.setSelectOptions('debugView', [
-	...renderer.getBufferNames().map((name) => ({ value: name, label: name })),
-	{ value: 'final', label: 'Final' },
-]);
+function screenshotName(): string {
+	const now = new Date();
+	const pad = (n: number) => String(n).padStart(2, '0');
+	const date = `${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${String(now.getFullYear()).slice(-2)}`;
+	const time = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+	return `asciiCam-${renderer.pipeline.getDebugView()}-${date}-${time}.png`;
+}
 
-// Engine overlay (FPS + controls + GPU timings) via [data-engine-overlay].
+let screenshotRequested = false;
 const monitor = mountEngineOverlay(settings, {
 	title: 'ASCII Live Cam',
 	showControls: true,
 	showTimings: true,
+	showDebugOutput: true,
+	showPasses: true,
+	showScreenshot: true,
+	pipeline: renderer.pipeline,
+	onScreenshot: () => {
+		screenshotRequested = true;
+	},
 });
 
 function loop() {
 	monitor.beginFrame();
 	renderer.render(video);
-	monitor.setTimings(renderer.getTimingStats());
+	if (screenshotRequested) {
+		downloadCanvasPng(canvas, screenshotName());
+		screenshotRequested = false;
+	}
 	monitor.endFrame();
 	video.requestVideoFrameCallback(loop);
 }

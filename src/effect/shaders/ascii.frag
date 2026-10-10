@@ -6,8 +6,8 @@ out vec4 fragColor;
 uniform sampler2D u_video;
 uniform sampler2D u_fillAtlas;
 uniform sampler2D u_edgeAtlas;
-uniform sampler2D u_tileTexture; // 240x135 resolution buffer from Pass 2
-uniform vec2 u_resolution;       // 1920.0, 1080.0
+uniform sampler2D u_tileTexture;
+uniform vec2 u_resolution;
 uniform bool u_monochromic;
 
 const float BLOCK_SIZE = 8.0f;
@@ -15,16 +15,13 @@ const float FILL_GLYPH_COUNT = 10.0f;
 const float EDGE_GLYPH_COUNT = 5.0f;
 
 void main() {
-    // Normalized coordinate over the whole screen [0.0, 1.0]
     vec2 screenUV = gl_FragCoord.xy / u_resolution;
 
-    // Read precomputed tile result from Pass 2
     vec4 tileData = texture(u_tileTexture, screenUV);
     int glyphIndex = int(round(tileData.r * 255.0f));
     bool isEdge = tileData.g > 0.5f;
     float lum = tileData.b;
 
-    // Sub-pixel position inside the 8x8 character cell [0.0, 1.0]
     vec2 cellUV = mod(gl_FragCoord.xy, BLOCK_SIZE) / BLOCK_SIZE;
 
     float glyphAlpha = 0.0f;
@@ -38,7 +35,6 @@ void main() {
     }
 
     if(!u_monochromic) {
-        // Cell center color from camera
         vec2 blockCenterPixel = floor(gl_FragCoord.xy / BLOCK_SIZE) * BLOCK_SIZE + (BLOCK_SIZE * 0.5f);
         vec3 baseColor = texture(u_video, blockCenterPixel / u_resolution).rgb * 1.35f;
 

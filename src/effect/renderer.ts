@@ -2,7 +2,7 @@
 // else to the declarative engine pipeline.
 
 import { FullScreenQuad } from '../engine';
-import type { PassTiming, Pipeline } from '../engine';
+import type { Pipeline } from '../engine';
 import { settings } from './settings';
 import { createEffectPipeline } from './pipeline';
 
@@ -14,7 +14,9 @@ export interface AsciiRendererOptions {
 export class AsciiRenderer {
 	private gl: WebGL2RenderingContext;
 	private videoTexture: WebGLTexture;
-	private pipeline: Pipeline;
+	// Public so the engine overlay can read buffers/passes/debug directly
+	// (no per-method forwarding needed).
+	readonly pipeline: Pipeline;
 
 	private readonly width = 1920;
 	private readonly height = 1080;
@@ -60,21 +62,5 @@ export class AsciiRenderer {
 		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
 
 		this.pipeline.draw();
-
-		// Debug output: show an intermediate buffer instead of the result.
-		const debugView = settings.get('debugView');
-		if (typeof debugView === 'string' && debugView !== 'final') {
-			this.pipeline.present(debugView);
-		}
-	}
-
-	// Per-pass GPU timing statistics (see Pipeline.getTimingStats).
-	getTimingStats(): ReadonlyMap<string, PassTiming> {
-		return this.pipeline.getTimingStats();
-	}
-
-	// Names of all pipeline buffers, for the debug view dropdown.
-	getBufferNames(): string[] {
-		return this.pipeline.getBufferNames();
 	}
 }

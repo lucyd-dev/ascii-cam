@@ -6,7 +6,8 @@ export type ParamKind = 'range' | 'toggle' | 'select';
 
 export interface ParamOption {
 	value: string;
-	label: string;
+	/** Display text; falls back to `value` when omitted. */
+	label?: string;
 }
 
 export interface SchemaParam {

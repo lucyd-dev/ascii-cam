@@ -27,6 +27,66 @@
 	pointer-events: auto;
 }
 
+/* ---- header: identity left, action icons right ---- */
+
+.afx-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.afx-header-main {
+	min-width: 0;
+}
+
+.afx-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.afx-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2px;
+	background: transparent;
+	border: none;
+	color: var(--afx-accent);
+	cursor: pointer;
+	opacity: 0.8;
+}
+
+.afx-icon-btn:hover {
+	opacity: 1;
+}
+
+.afx-icon-btn svg {
+	width: 15px;
+	height: 15px;
+	display: block;
+}
+
+/* Header action buttons: framed + tinted. */
+.afx-header-actions .afx-icon-btn {
+	padding: 3px 6px;
+	border: 1px solid var(--afx-accent);
+	border-radius: 4px;
+	background: var(--afx-accent-dim);
+	opacity: 1;
+}
+
+.afx-header-actions .afx-icon-btn:hover {
+	background: var(--afx-accent);
+	color: #0d0d0d;
+}
+
+.afx-header-actions .afx-icon-btn svg {
+	width: 16px;
+	height: 16px;
+}
+
 .afx-overlay-title {
 	font-weight: 700;
 	margin-bottom: 2px;
@@ -42,10 +102,47 @@
 	font-weight: 700;
 }
 
-.afx-controls {
+/* ---- settings dropdown ---- */
+
+.afx-settings {
 	margin-top: 6px;
 	padding-top: 6px;
 	border-top: 1px solid var(--afx-border);
+}
+
+.afx-settings summary {
+	cursor: pointer;
+	font-weight: 700;
+}
+
+.afx-controls {
+	margin-top: 4px;
+}
+
+.afx-reset-all {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
+	margin-top: 10px;
+	width: 100%;
+	padding: 5px 8px;
+	background: var(--afx-accent-dim);
+	color: var(--afx-accent);
+	border: 1px solid var(--afx-border);
+	border-radius: 4px;
+	cursor: pointer;
+	font: inherit;
+}
+
+.afx-reset-all:hover {
+	background: var(--afx-accent);
+	color: #0d0d0d;
+}
+
+.afx-reset-all svg {
+	width: 15px;
+	height: 15px;
 }
 
 .afx-control {
@@ -64,6 +161,10 @@
 	width: 34px;
 	text-align: right;
 	opacity: 0.8;
+}
+
+.afx-control > .afx-icon-btn {
+	margin-left: auto; /* per-option reset: always pinned to the far right */
 }
 
 .afx-control input[type='range'] {
@@ -88,15 +189,38 @@
 	padding: 2px 4px;
 }
 
-.afx-timings {
+/* ---- debug output divider + passes / GPU timings dropdowns ---- */
+
+.afx-separator {
 	margin-top: 6px;
-	padding-top: 6px;
 	border-top: 1px solid var(--afx-border);
 }
 
+.afx-passes,
+.afx-timings {
+	margin-top: 6px;
+}
+
+.afx-passes summary,
 .afx-timings summary {
 	cursor: pointer;
 	font-weight: 700;
+}
+
+.afx-passes-list {
+	margin-top: 4px;
+}
+
+.afx-pass {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-top: 3px;
+	cursor: pointer;
+}
+
+.afx-pass input[type='checkbox'] {
+	accent-color: var(--afx-accent);
 }
 
 .afx-timings-list {
@@ -144,21 +268,5 @@
 }
 
 .afx-timings-copy:hover {
-	background: var(--afx-accent-dim);
-}
-
-.afx-reset {
-	margin-top: 8px;
-	width: 100%;
-	background: transparent;
-	color: var(--afx-accent);
-	border: 1px solid var(--afx-border);
-	border-radius: 4px;
-	padding: 4px 8px;
-	cursor: pointer;
-	font: inherit;
-}
-
-.afx-reset:hover {
 	background: var(--afx-accent-dim);
 }

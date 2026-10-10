@@ -4,7 +4,7 @@
 // defaults, are overlaid with localStorage, and are pushed into any program
 // that declares the matching uniform.
 
-import type { ParamOption, SchemaParam, SettingsValue } from './schema';
+import type { SchemaParam, SettingsValue } from './schema';
 import type { UniformApplier } from '../pass/pass';
 
 export class SettingsStore implements UniformApplier {
@@ -26,14 +26,6 @@ export class SettingsStore implements UniformApplier {
 		return this.params;
 	}
 
-	// Replaces the options of a 'select' parameter at runtime. Lets the engine
-	// derive e.g. the debug list from live pipeline buffers instead of a
-	// hardcoded list. Call before the overlay controls are built.
-	setSelectOptions(key: string, options: ParamOption[]): void {
-		const param = this.params.find((p) => p.key === key);
-		if (param) param.options = options;
-	}
-
 	get(key: string): SettingsValue | undefined {
 		return this.values[key];
 	}
@@ -48,6 +40,14 @@ export class SettingsStore implements UniformApplier {
 		for (const p of this.params) {
 			this.values[p.key] = p.default;
 		}
+	}
+
+	// Restores a single parameter to its default and persists the result.
+	resetKey(key: string): void {
+		const param = this.params.find((p) => p.key === key);
+		if (!param) return;
+		this.values[key] = param.default;
+		localStorage.setItem(this.storageKey, JSON.stringify(this.values));
 	}
 
 	applyTo(gl: WebGL2RenderingContext, program: WebGLProgram): void {

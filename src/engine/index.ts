@@ -19,6 +19,7 @@ export { createRenderTarget } from './gl/framebuffer';
 export type { RenderTarget, TextureFormat } from './gl/framebuffer';
 export { FullScreenQuad } from './gl/quad';
 export { bindTexture, unbindTextureEverywhere } from './gl/binding';
+export { downloadCanvasPng } from './gl/capture';
 export { GpuTimer } from './gl/gpu-timer';
 export type { PassTiming } from './gl/gpu-timer';
 
@@ -49,4 +50,4 @@ export type { SchemaParam, ParamKind, ParamOption, SettingsValue } from './setti
 // ---- ui ----
 export { FpsMeter } from './ui/fps';
 export { createEngineOverlay, mountEngineOverlay } from './ui/panel';
-export type { EngineOverlayOptions, EngineMonitor } from './ui/panel';
+export type { EngineOverlayOptions, EngineMonitor, PipelineControls } from './ui/panel';

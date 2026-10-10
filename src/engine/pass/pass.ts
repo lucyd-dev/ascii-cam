@@ -90,8 +90,6 @@ export class Pass {
 
 	// ---- draw ----
 
-	// binds the program attributes, pushes the UI-driven uniforms,
-	// and renders the fullscreen quad.
 	render(): void {
 		this.quad.bind(this.program);
 		this.uniforms.applyTo(this.gl, this.program);
