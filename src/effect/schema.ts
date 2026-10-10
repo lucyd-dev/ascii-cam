@@ -21,6 +21,24 @@ export const PARAMS: SchemaParam[] = [
 		step: 0.05,
 	},
 	{
+		key: 'u_bloomThreshold',
+		label: 'Bloom Threshold',
+		kind: 'range',
+		default: 0.35,
+		min: 0,
+		max: 1,
+		step: 0.01,
+	},
+	{
+		key: 'u_bloomKnee',
+		label: 'Bloom Knee',
+		kind: 'range',
+		default: 0.4,
+		min: 0,
+		max: 1,
+		step: 0.01,
+	},
+	{
 		// NOTE: lower = stronger temporal smoothing (less noise/flicker, more
 		// ghosting). The label reads inverted relative to its value.
 		key: 'u_emaAlpha',
